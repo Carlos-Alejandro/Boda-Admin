@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { getInvitations } from '../api/invitationService';
 import type {
@@ -73,16 +74,25 @@ export function InvitationListPage() {
 	};
 
 	return (
-		<section aria-labelledby="invitations-title">
-			<h1 id="invitations-title">Invitaciones</h1>
+		<section className="invitations-page" aria-labelledby="invitations-title">
+			<header className="page-heading page-heading-with-action">
+				<div>
+					<p className="section-eyebrow">Gestión de invitados</p>
+					<h1 id="invitations-title">Invitaciones</h1>
+					<p>Consulta, busca y filtra las invitaciones de la boda.</p>
+				</div>
+				<Link className="primary-link" to="/invitaciones/nueva">
+					Nueva invitación
+				</Link>
+			</header>
 			{response && (
-				<p>
+				<p className="results-count">
 					{response.total}{' '}
 					{response.total === 1 ? 'invitación' : 'invitaciones'}
 				</p>
 			)}
 
-			<div className="invitation-filters">
+			<div className="invitation-filters" aria-label="Filtros de invitaciones">
 				<label>
 					Buscar
 					<input
@@ -124,19 +134,19 @@ export function InvitationListPage() {
 					</select>
 				</label>
 
-				<button type="button" onClick={clearFilters} disabled={!hasActiveFilters}>
+				<button className="secondary-button" type="button" onClick={clearFilters} disabled={!hasActiveFilters}>
 					Limpiar filtros
 				</button>
 			</div>
 
-			{loading && <p>Cargando invitaciones...</p>}
+			{loading && <p className="content-state">Cargando invitaciones...</p>}
 
 			{!loading && (error || !response) && (
-				<p className="error-message">No fue posible cargar las invitaciones.</p>
+				<p className="error-message content-state">No fue posible cargar las invitaciones.</p>
 			)}
 
 			{!loading && !error && response && response.items.length === 0 && (
-				<p>
+				<p className="content-state">
 					{hasActiveFilters
 						? 'No se encontraron invitaciones con estos filtros.'
 						: 'No hay invitaciones.'}
@@ -153,8 +163,14 @@ export function InvitationListPage() {
 							{invitation.maxGuests}{' '}
 							{invitation.maxGuests === 1 ? 'invitado' : 'invitados'}
 						</p>
-						<p>{rsvpLabels[invitation.rsvpStatus]}</p>
-						<p>{invitation.isArchived ? 'Archivada' : 'Activa'}</p>
+						<div className="invitation-badges">
+							<span className={`status-badge status-${invitation.rsvpStatus}`}>
+								{rsvpLabels[invitation.rsvpStatus]}
+							</span>
+							<span className={`status-badge ${invitation.isArchived ? 'status-archived' : 'status-active'}`}>
+								{invitation.isArchived ? 'Archivada' : 'Activa'}
+							</span>
+						</div>
 					</li>
 					))}
 				</ul>

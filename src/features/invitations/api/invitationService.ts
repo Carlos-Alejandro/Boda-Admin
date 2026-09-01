@@ -1,5 +1,7 @@
 import { apiRequest } from '../../../services/http/apiClient';
 import type {
+	CreateInvitationInput,
+	Invitation,
 	InvitationFilters,
 	InvitationListResponse,
 } from '../model/invitation.types';
@@ -18,4 +20,11 @@ export function getInvitations(filters: InvitationFilters = {}) {
 	const path = `/api/admin/invitations${queryString ? `?${queryString}` : ''}`;
 
 	return apiRequest<InvitationListResponse>(path);
+}
+
+export function createInvitation(input: CreateInvitationInput) {
+	return apiRequest<Invitation>('/api/admin/invitations', {
+		method: 'POST',
+		body: JSON.stringify(input),
+	});
 }

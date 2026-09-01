@@ -20,6 +20,13 @@ export interface InvitationFilters {
 	archived?: boolean;
 }
 
+export interface CreateInvitationInput {
+	displayName: string;
+	knownGuests: Array<{ name: string }>;
+	openSlots: number;
+	replacementsAllowed: boolean;
+}
+
 export interface Invitation {
 	id: string;
 	displayName: string;

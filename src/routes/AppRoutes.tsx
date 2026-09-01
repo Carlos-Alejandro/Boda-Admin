@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 
+import { CreateInvitationPage } from '../features/invitations/pages/CreateInvitationPage';
 import { InvitationListPage } from '../features/invitations/pages/InvitationListPage';
 import { AdminLayout } from '../layouts/AdminLayout';
 import { DashboardPage } from '../pages/DashboardPage/DashboardPage';
@@ -19,6 +20,7 @@ export function AppRoutes() {
 				<Route element={<AdminLayout />}>
 					<Route index element={<DashboardPage />} />
 					<Route path="invitaciones" element={<InvitationListPage />} />
+					<Route path="invitaciones/nueva" element={<CreateInvitationPage />} />
 				</Route>
 			</Route>
 

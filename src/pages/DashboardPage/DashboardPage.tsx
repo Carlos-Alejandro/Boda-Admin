@@ -29,21 +29,37 @@ export function DashboardPage() {
 	}, []);
 
 	return (
-		<section>
-			<h1>Dashboard</h1>
+		<section className="dashboard-page">
+			<header className="page-heading">
+				<p className="section-eyebrow">Panel administrativo</p>
+				<h1>Dashboard</h1>
+				<p>Consulta el estado general de tu sesión y los servicios conectados.</p>
+			</header>
 
-			<p>Sesión iniciada correctamente.</p>
+			<div className="dashboard-grid">
+				<article className="dashboard-card">
+					<p className="card-kicker">Cuenta</p>
+					<h2>Sesión activa</h2>
+					<p className="status-line">
+						<span className="status-dot" aria-hidden="true" />
+						Sesión iniciada correctamente
+					</p>
+					{user?.displayName && <strong>{user.displayName}</strong>}
+					{user?.email && <p className="muted-text">{user.email}</p>}
+				</article>
 
-			{user?.displayName && <p>{user.displayName}</p>}
-			{user?.email && <p>{user.email}</p>}
+				<article className="dashboard-card">
+					<p className="card-kicker">Conectividad</p>
+					<h2>Estado de Boda-API</h2>
+					{apiError ? (
+						<p className="error-message">{apiError}</p>
+					) : (
+						<p className="muted-text">{apiStatus}</p>
+					)}
+				</article>
+			</div>
 
-			<hr />
-
-			<h2>Estado de Boda-API</h2>
-
-			{apiError ? <p>{apiError}</p> : <p>{apiStatus}</p>}
-
-			<button type="button" onClick={() => void logout()}>
+			<button className="secondary-button" type="button" onClick={() => void logout()}>
 				Cerrar sesión
 			</button>
 		</section>
