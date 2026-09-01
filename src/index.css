@@ -90,6 +90,37 @@ button {
 	list-style: none;
 }
 
+.invitation-filters {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: end;
+	gap: 1rem;
+	margin: 1.5rem 0;
+}
+
+.invitation-filters label {
+	display: grid;
+	gap: 0.35rem;
+}
+
+.invitation-filters input,
+.invitation-filters select {
+	min-height: 2.5rem;
+	padding: 0.5rem 0.65rem;
+	border: 1px solid #a8a29e;
+	border-radius: 0.35rem;
+	font: inherit;
+}
+
+.invitation-filters input {
+	width: min(22rem, 80vw);
+}
+
+.invitation-filters button:disabled {
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+
 .invitation-list-item {
 	display: grid;
 	gap: 0.35rem;

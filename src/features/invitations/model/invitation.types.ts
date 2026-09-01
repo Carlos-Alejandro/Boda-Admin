@@ -14,6 +14,12 @@ export type RsvpStatus =
 	| 'partial'
 	| 'declined';
 
+export interface InvitationFilters {
+	search?: string;
+	rsvpStatus?: RsvpStatus;
+	archived?: boolean;
+}
+
 export interface Invitation {
 	id: string;
 	displayName: string;
