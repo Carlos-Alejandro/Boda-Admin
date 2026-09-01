@@ -56,11 +56,50 @@ button {
 }
 
 .admin-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
   padding: 1rem 1.5rem;
   border-bottom: 1px solid #e7e5e4;
   background: #ffffff;
 }
 
+.admin-navigation {
+	display: flex;
+	gap: 1rem;
+}
+
+.admin-navigation a {
+	color: inherit;
+}
+
+.admin-navigation a.active {
+	font-weight: 700;
+}
+
 .admin-content {
   padding: 2rem 1.5rem;
+}
+
+.invitation-list {
+	display: grid;
+	gap: 1rem;
+	margin: 1.5rem 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.invitation-list-item {
+	display: grid;
+	gap: 0.35rem;
+	padding: 1rem;
+	border: 1px solid #e7e5e4;
+	border-radius: 0.5rem;
+	background: #ffffff;
+}
+
+.invitation-list-item h2,
+.invitation-list-item p {
+	margin: 0;
 }

@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 
+import { InvitationListPage } from '../features/invitations/pages/InvitationListPage';
 import { AdminLayout } from '../layouts/AdminLayout';
 import { DashboardPage } from '../pages/DashboardPage/DashboardPage';
 import { LoginPage } from '../pages/LoginPage/LoginPage';
@@ -17,6 +18,7 @@ export function AppRoutes() {
 			<Route element={<ProtectedRoute />}>
 				<Route element={<AdminLayout />}>
 					<Route index element={<DashboardPage />} />
+					<Route path="invitaciones" element={<InvitationListPage />} />
 				</Route>
 			</Route>
 
