@@ -1,11 +1,15 @@
 import { type FormEvent, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 
+import { Button, ButtonLink } from '../../../shared/components/Button/Button';
+import { PageHeader } from '../../../shared/components/PageHeader/PageHeader';
 import { createInvitation } from '../api/invitationService';
+import { CreationSuccess } from '../components/CreationSuccess';
+import { InvitationSummary } from '../components/InvitationSummary';
 import type {
 	CreateInvitationInput,
 	Invitation,
 } from '../model/invitation.types';
+import './CreateInvitationPage.css';
 
 type FormStatus = 'idle' | 'submitting' | 'success' | 'error';
 
@@ -109,28 +113,10 @@ export function CreateInvitationPage() {
 
 	if (status === 'success' && createdInvitation) {
 		return (
-			<section
-				className="create-invitation-page create-invitation-success"
-				aria-labelledby="create-invitation-title"
-			>
-				<div className="success-card">
-					<span className="success-mark" aria-hidden="true">
-						✓
-					</span>
-					<p className="section-eyebrow">Invitación registrada</p>
-					<h1 id="create-invitation-title">
-						Invitación creada correctamente.
-					</h1>
-					<p className="success-name">{createdInvitation.displayName}</p>
-					<p className="invitation-id">
-						<span>ID generado</span>
-						<strong>{createdInvitation.id}</strong>
-					</p>
-					<Link className="primary-link" to="/invitaciones">
-						Volver a invitaciones
-					</Link>
-				</div>
-			</section>
+			<CreationSuccess
+				displayName={createdInvitation.displayName}
+				id={createdInvitation.id}
+			/>
 		);
 	}
 
@@ -145,26 +131,25 @@ export function CreateInvitationPage() {
 
 	return (
 		<section
-			className="create-invitation-page"
+			className="w-full text-[0.9rem] max-md:text-[0.9375rem]"
 			aria-labelledby="create-invitation-title"
 		>
-			<header className="create-invitation-heading">
-				<p className="section-eyebrow">Gestión de invitaciones</p>
-				<h1 id="create-invitation-title">Nueva invitación</h1>
-				<p>
-					Crea una invitación personalizada y define las personas y lugares
-					disponibles.
-				</p>
-			</header>
+			<PageHeader
+				className="min-[75rem]:max-w-[46rem] min-[75rem]:[&_h1]:text-[1.95rem] min-[75rem]:[&_p:last-child]:text-[0.88rem]"
+				eyebrow="Gestión de invitaciones"
+				title="Nueva invitación"
+				titleId="create-invitation-title"
+				description="Crea una invitación personalizada y define las personas y lugares disponibles."
+			/>
 
-			<form className="invitation-form" onSubmit={handleSubmit} noValidate>
-				<div className="form-main-column">
-					<div className="form-section">
-					<div className="form-section-heading">
-						<p className="section-eyebrow">Información principal</p>
+			<form className="create-invitation-form" onSubmit={handleSubmit} noValidate>
+				<div className="create-invitation-form__main">
+					<div className="create-invitation-form__section">
+					<div className="create-invitation-form__section-heading">
+						<p className="create-invitation-form__eyebrow">Información principal</p>
 						<h2>Información de la invitación</h2>
 					</div>
-					<label className="field-label">
+					<label className="create-invitation-form__field-label">
 						<span>Nombre de la invitación</span>
 						<input
 							type="text"
@@ -175,20 +160,20 @@ export function CreateInvitationPage() {
 						/>
 					</label>
 					{errors.displayName && (
-						<p className="error-message">{errors.displayName}</p>
+						<p className="create-invitation-form__inline-error">{errors.displayName}</p>
 					)}
 					</div>
 
-					<fieldset className="form-section" disabled={isSubmitting}>
+					<fieldset className="create-invitation-form__section" disabled={isSubmitting}>
 					<legend className="visually-hidden">Personas incluidas</legend>
-					<div className="form-section-heading">
-						<p className="section-eyebrow">Personas</p>
+					<div className="create-invitation-form__section-heading">
+						<p className="create-invitation-form__eyebrow">Personas</p>
 						<h2>Personas incluidas</h2>
 						<p>Agrega a las personas que ya conoces por nombre.</p>
 					</div>
-					<div className="known-guests-list">
+					<div className="create-invitation-form__guests">
 						{knownGuests.map((guest, index) => (
-							<div className="known-guest-row" key={index}>
+							<div className="create-invitation-form__guest-row" key={index}>
 								<label>
 									<span className="visually-hidden">
 										Nombre de la persona {index + 1}
@@ -203,7 +188,7 @@ export function CreateInvitationPage() {
 									/>
 								</label>
 								<button
-									className="remove-person-button"
+									className="create-invitation-form__remove-person"
 									type="button"
 									onClick={() => removeKnownGuest(index)}
 								>
@@ -213,30 +198,30 @@ export function CreateInvitationPage() {
 						))}
 					</div>
 					<button
-						className="add-person-button"
+						className="create-invitation-form__add-person"
 						type="button"
 						onClick={() => setKnownGuests((guests) => [...guests, ''])}
 					>
 						+ Agregar persona
 					</button>
 					{errors.knownGuests && (
-						<p className="error-message">{errors.knownGuests}</p>
+						<p className="create-invitation-form__inline-error">{errors.knownGuests}</p>
 					)}
 					</fieldset>
 				</div>
 
-				<div className="form-side-column">
-					<div className="form-section form-section-grid">
+				<div className="create-invitation-form__side">
+					<div className="create-invitation-form__section create-invitation-form__section-grid">
 					<div>
-						<div className="form-section-heading">
-							<p className="section-eyebrow">Capacidad</p>
+						<div className="create-invitation-form__section-heading">
+							<p className="create-invitation-form__eyebrow">Capacidad</p>
 							<h2>Lugares adicionales</h2>
 							<p>
 								Lugares disponibles para acompañantes que todavía no tienen un
 								nombre definido.
 							</p>
 						</div>
-						<label className="field-label compact-number-field">
+						<label className="create-invitation-form__field-label create-invitation-form__number-field">
 							<span className="visually-hidden">Lugares adicionales</span>
 							<input
 								type="number"
@@ -249,16 +234,16 @@ export function CreateInvitationPage() {
 							/>
 						</label>
 						{errors.openSlots && (
-							<p className="error-message">{errors.openSlots}</p>
+							<p className="create-invitation-form__inline-error">{errors.openSlots}</p>
 						)}
 					</div>
 
-					<div className="preferences-panel">
-						<div className="form-section-heading">
-							<p className="section-eyebrow">Preferencias</p>
+					<div className="create-invitation-form__preferences">
+						<div className="create-invitation-form__section-heading">
+							<p className="create-invitation-form__eyebrow">Preferencias</p>
 							<h2>¿Permitir sustituciones?</h2>
 						</div>
-						<label className="checkbox-label">
+						<label className="create-invitation-form__checkbox">
 							<input
 								type="checkbox"
 								checked={replacementsAllowed}
@@ -269,55 +254,36 @@ export function CreateInvitationPage() {
 							/>
 							<span>Permitir sustituciones</span>
 						</label>
-						<p className="field-help">
+						<p className="create-invitation-form__help">
 							Permite que una persona que no asistirá pueda ser sustituida por
 							otra.
 						</p>
 					</div>
 					</div>
 
-					<aside className="invitation-summary" aria-label="Resumen de invitación">
-					<div className="form-section-heading">
-						<p className="section-eyebrow">Vista previa</p>
-						<h2>Resumen de invitación</h2>
-					</div>
-					<dl>
-						<div>
-							<dt>Personas con nombre</dt>
-							<dd>{namedPeopleCount}</dd>
-						</div>
-						<div>
-							<dt>Lugares adicionales</dt>
-							<dd>{visualOpenSlots}</dd>
-						</div>
-						<div className="summary-total">
-							<dt>Lugares totales</dt>
-							<dd>{visualTotal}</dd>
-						</div>
-					</dl>
-					<p className="summary-preference">
-						{replacementsAllowed
-							? 'Sustituciones permitidas'
-							: 'Sustituciones no permitidas'}
-					</p>
-					</aside>
+					<InvitationSummary
+						namedPeopleCount={namedPeopleCount}
+						openSlots={visualOpenSlots}
+						total={visualTotal}
+						replacementsAllowed={replacementsAllowed}
+					/>
 
 					{errors.capacity && (
-						<p className="error-message form-alert">{errors.capacity}</p>
+						<p className="create-invitation-form__alert">{errors.capacity}</p>
 					)}
 					{status === 'error' && (
-						<p className="error-message form-alert" role="alert">
+						<p className="create-invitation-form__alert" role="alert">
 							No fue posible crear la invitación.
 						</p>
 					)}
 
-					<div className="form-actions">
-						<button className="primary-button" type="submit" disabled={isSubmitting}>
+					<div className="create-invitation-form__actions">
+						<Button variant="primary" type="submit" disabled={isSubmitting}>
 							{isSubmitting ? 'Creando...' : 'Crear invitación'}
-						</button>
-						<Link className="secondary-link" to="/invitaciones">
+						</Button>
+						<ButtonLink variant="text" to="/invitaciones">
 							Volver a invitaciones
-						</Link>
+						</ButtonLink>
 					</div>
 				</div>
 			</form>

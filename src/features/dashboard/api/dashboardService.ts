@@ -1,4 +1,4 @@
-import { apiRequest } from '../http/apiClient';
+import { apiRequest } from '../../../services/http/apiClient';
 
 export interface AdminHealthResponse {
 	status: string;

@@ -2,8 +2,8 @@ import { Route, Routes } from 'react-router-dom';
 
 import { CreateInvitationPage } from '../features/invitations/pages/CreateInvitationPage';
 import { InvitationListPage } from '../features/invitations/pages/InvitationListPage';
-import { AdminLayout } from '../layouts/AdminLayout';
-import { DashboardPage } from '../pages/DashboardPage/DashboardPage';
+import { DashboardPage } from '../features/dashboard/pages/DashboardPage';
+import { AdminLayout } from '../layouts/AdminLayout/AdminLayout';
 import { LoginPage } from '../pages/LoginPage/LoginPage';
 import { NotFoundPage } from '../pages/NotFoundPage/NotFoundPage';
 import { ProtectedRoute } from './ProtectedRoute';

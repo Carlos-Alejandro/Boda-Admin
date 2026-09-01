@@ -1,0 +1,45 @@
+@theme {
+	--color-cream: #faf8f3;
+	--color-surface: #fffefa;
+	--color-surface-soft: #f7f4ec;
+	--color-admin-green-950: #1f352c;
+	--color-admin-green-900: #263f34;
+	--color-admin-green-700: #315244;
+	--color-admin-green-100: #e7eee9;
+	--color-admin-gold: #a98445;
+	--color-admin-muted: #66746d;
+	--color-admin-border: #e4ded1;
+	--color-admin-danger: #9b493b;
+	--font-admin-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	--font-admin-serif: Georgia, "Times New Roman", serif;
+	--shadow-admin: 0 1rem 3rem rgba(34, 54, 45, 0.07);
+	--radius-admin: 0.8rem;
+	--text-admin-control: 0.85rem;
+	--text-admin-eyebrow: 0.65rem;
+}
+
+:root {
+	font-family: var(--font-admin-sans);
+	color: var(--color-admin-green-900);
+	background: var(--color-cream);
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	--page-max-width: 78rem;
+	--content-padding: clamp(1rem, 3vw, 2rem);
+	--cream: var(--color-cream);
+	--surface: var(--color-surface);
+	--surface-soft: var(--color-surface-soft);
+	--green-950: var(--color-admin-green-950);
+	--green-900: var(--color-admin-green-900);
+	--green-700: var(--color-admin-green-700);
+	--green-100: var(--color-admin-green-100);
+	--gold: var(--color-admin-gold);
+	--text-muted: var(--color-admin-muted);
+	--border: var(--color-admin-border);
+	--danger: var(--color-admin-danger);
+	--shadow: var(--shadow-admin);
+}
+
+@media (min-width: 75rem) {
+	:root { --page-max-width: 82rem; }
+}

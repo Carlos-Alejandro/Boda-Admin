@@ -1,0 +1,20 @@
+.admin-header { position: relative; display: grid; min-height: 5.5rem; place-items: center; overflow: hidden; border-bottom: 1px solid #e2d6c0; background: rgba(255, 254, 250, 0.9); }
+.admin-header::before,
+.admin-header::after { position: absolute; width: 9rem; height: 5rem; border: solid rgba(169, 132, 69, 0.24); border-width: 1px 0 0; border-radius: 50%; content: ""; pointer-events: none; transform: rotate(20deg); }
+.admin-header::before { top: 0.5rem; left: -1.5rem; }
+.admin-header::after { right: -1.5rem; bottom: -0.5rem; transform: rotate(200deg); }
+.admin-header__copy { position: relative; z-index: 1; display: grid; gap: 0.2rem; text-align: center; }
+.admin-header__copy strong { color: #2c241d; font-family: var(--font-admin-serif); font-size: clamp(1.35rem, 2vw, 1.75rem); font-weight: 500; letter-spacing: 0.015em; }
+.admin-header__copy span { color: #725f4e; font-size: 0.72rem; }
+
+@media (max-width: 48rem) {
+	.admin-header { min-height: 4.75rem; }
+	.admin-header__copy strong { font-size: 1.55rem; }
+	.admin-header__copy span { font-size: 0.75rem; }
+}
+
+@media (max-width: 36rem) {
+	.admin-header { min-height: 4.25rem; }
+	.admin-header__copy strong { font-size: 1.35rem; }
+	.admin-header__copy span { display: none; }
+}
