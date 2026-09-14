@@ -29,6 +29,7 @@ export interface CreateInvitationInput {
 
 export interface Invitation {
 	id: string;
+	version: string;
 	displayName: string;
 	maxGuests: number;
 	replacementsAllowed: boolean;
@@ -39,6 +40,15 @@ export interface Invitation {
 	updatedAt: string | null;
 	editOverrideUntil: string | null;
 	guests: Guest[];
+}
+
+export interface UpdateInvitationInput {
+	displayName?: string;
+	replacementsAllowed?: boolean;
+}
+
+export interface ChangeInvitationCapacityInput {
+	maxGuests: number;
 }
 
 export interface InvitationListResponse {

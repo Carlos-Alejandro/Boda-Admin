@@ -1,9 +1,11 @@
 import { apiRequest } from '../../../services/http/apiClient';
 import type {
+	ChangeInvitationCapacityInput,
 	CreateInvitationInput,
 	Invitation,
 	InvitationFilters,
 	InvitationListResponse,
+	UpdateInvitationInput,
 } from '../model/invitation.types';
 
 export function getInvitations(filters: InvitationFilters = {}) {
@@ -32,5 +34,31 @@ export function createInvitation(input: CreateInvitationInput) {
 	return apiRequest<Invitation>('/api/admin/invitations', {
 		method: 'POST',
 		body: JSON.stringify(input),
+	});
+}
+
+export function updateInvitation(id: string, input: UpdateInvitationInput) {
+	const payload: UpdateInvitationInput = {};
+	if (input.displayName !== undefined) payload.displayName = input.displayName;
+	if (input.replacementsAllowed !== undefined) payload.replacementsAllowed = input.replacementsAllowed;
+	return apiRequest<Invitation>(`/api/admin/invitations/${encodeURIComponent(id)}`, {
+		method: 'PATCH',
+		body: JSON.stringify(payload),
+	});
+}
+
+export function changeInvitationCapacity(id: string, input: ChangeInvitationCapacityInput, signal?: AbortSignal) {
+	return apiRequest<Invitation>(`/api/admin/invitations/${encodeURIComponent(id)}/capacity`, {
+		method: 'PATCH',
+		body: JSON.stringify({ maxGuests: input.maxGuests }),
+		signal,
+	});
+}
+
+export function removeInvitationGuest(invitationId: string, guestIndex: number, version: string, signal?: AbortSignal) {
+	return apiRequest<Invitation>(`/api/admin/invitations/${encodeURIComponent(invitationId)}/guests/${guestIndex}/remove`, {
+		method: 'POST',
+		headers: { 'X-Invitation-Version': version },
+		signal,
 	});
 }
