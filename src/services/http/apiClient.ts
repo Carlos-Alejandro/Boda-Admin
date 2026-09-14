@@ -6,6 +6,16 @@ if (!API_BASE_URL) {
 	throw new Error('Falta la variable VITE_API_BASE_URL.');
 }
 
+export class ApiError extends Error {
+	readonly status: number;
+
+	constructor(status: number) {
+		super(`La API respondió con estado ${status}.`);
+		this.name = 'ApiError';
+		this.status = status;
+	}
+}
+
 export async function apiRequest<T>(
 	path: string,
 	options: RequestInit = {},
@@ -28,7 +38,7 @@ export async function apiRequest<T>(
 	});
 
 	if (!response.ok) {
-		throw new Error(`La API respondió con estado ${response.status}.`);
+		throw new ApiError(response.status);
 	}
 
 	return response.json() as Promise<T>;

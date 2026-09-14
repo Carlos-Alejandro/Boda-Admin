@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { Invitation } from '../model/invitation.types';
 import { InvitationStatusBadge } from './InvitationStatusBadge';
 
@@ -19,6 +20,13 @@ export function InvitationList({ items }: InvitationListProps) {
 					<div className="flex flex-wrap justify-end gap-1.5 max-md:col-start-2 max-md:row-span-2 max-md:row-start-1 max-[36rem]:col-auto max-[36rem]:row-auto max-[36rem]:justify-start">
 						<InvitationStatusBadge status={invitation.rsvpStatus} />
 						<InvitationStatusBadge status={invitation.isArchived ? 'archived' : 'active'} />
+						<Link
+							className="inline-flex min-h-9 items-center px-1 text-xs font-semibold text-admin-green-700 underline underline-offset-4"
+							to={`/invitaciones/${encodeURIComponent(invitation.id)}`}
+							aria-label={`Ver detalle de ${invitation.displayName}`}
+						>
+							Ver detalle
+						</Link>
 					</div>
 				</li>
 			))}

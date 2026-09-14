@@ -22,6 +22,12 @@ export function getInvitations(filters: InvitationFilters = {}) {
 	return apiRequest<InvitationListResponse>(path);
 }
 
+export function getInvitationById(id: string, signal?: AbortSignal) {
+	return apiRequest<Invitation>(`/api/admin/invitations/${encodeURIComponent(id)}`, {
+		signal,
+	});
+}
+
 export function createInvitation(input: CreateInvitationInput) {
 	return apiRequest<Invitation>('/api/admin/invitations', {
 		method: 'POST',
