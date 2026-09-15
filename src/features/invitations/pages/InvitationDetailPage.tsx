@@ -9,6 +9,7 @@ import { InvitationStatusBadge } from '../components/InvitationStatusBadge';
 import { InvitationEditForm } from '../components/InvitationEditForm';
 import { InvitationCapacityForm } from '../components/InvitationCapacityForm';
 import { RemoveInvitationGuest } from '../components/RemoveInvitationGuest';
+import { InvitationArchiveConfirmation } from '../components/InvitationArchiveConfirmation';
 import type { GuestType, Invitation } from '../model/invitation.types';
 
 const dateFormatter = new Intl.DateTimeFormat('es-MX', {
@@ -61,6 +62,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 	const [editing, setEditing] = useState(false);
 	const [changingCapacity, setChangingCapacity] = useState(false);
 	const [removingIndex, setRemovingIndex] = useState<number | null>(null);
+	const [changingArchive, setChangingArchive] = useState(false);
 	const [notice, setNotice] = useState('');
 
 	useEffect(() => {
@@ -83,7 +85,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 	}, [id, attempt]);
 
 	const invitation = state.status === 'success' ? state.invitation : null;
-	const idle = !editing && !changingCapacity && removingIndex === null;
+	const idle = !editing && !changingCapacity && removingIndex === null && !changingArchive;
 
 	return (
 		<section className="w-full text-[0.9rem]" aria-labelledby="invitation-detail-title">
@@ -203,6 +205,14 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 									<DetailField label="Estado"><InvitationStatusBadge status={invitation.isArchived ? 'archived' : 'active'} /></DetailField>
 									{invitation.isArchived && <DetailField label="Fecha de archivo">{formatDate(invitation.archivedAt, 'Archivada — fecha no disponible')}</DetailField>}
 								</dl>
+								{idle && <Button className="mt-4" variant="secondary" type="button" onClick={() => { setNotice(''); setChangingArchive(true); }}>{invitation.isArchived ? 'Restaurar invitación' : 'Archivar invitación'}</Button>}
+								{changingArchive && <InvitationArchiveConfirmation
+									invitation={invitation}
+									onCancel={() => setChangingArchive(false)}
+									onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setChangingArchive(false); setNotice(invitation.isArchived ? 'Invitación restaurada correctamente.' : 'Invitación archivada correctamente.'); }}
+									onUnavailable={() => { setChangingArchive(false); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
+									onRefresh={(message) => { setChangingArchive(false); setNotice(message); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
+								/>}
 							</DetailCard>
 							<DetailCard title="Fechas">
 								<dl className="m-0 grid gap-4">

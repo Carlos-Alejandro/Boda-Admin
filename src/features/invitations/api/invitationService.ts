@@ -62,3 +62,15 @@ export function removeInvitationGuest(invitationId: string, guestIndex: number, 
 		signal,
 	});
 }
+
+export function archiveInvitation(id: string) {
+	return apiRequest<Invitation>(`/api/admin/invitations/${encodeURIComponent(id)}/archive`, {
+		method: 'POST',
+	});
+}
+
+export function restoreInvitation(id: string) {
+	return apiRequest<Invitation>(`/api/admin/invitations/${encodeURIComponent(id)}/restore`, {
+		method: 'POST',
+	});
+}
