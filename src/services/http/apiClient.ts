@@ -8,11 +8,13 @@ if (!API_BASE_URL) {
 
 export class ApiError extends Error {
 	readonly status: number;
+	readonly validationMessage?: string;
 
-	constructor(status: number) {
+	constructor(status: number, validationMessage?: string) {
 		super(`La API respondió con estado ${status}.`);
 		this.name = 'ApiError';
 		this.status = status;
+		this.validationMessage = validationMessage;
 	}
 }
 
@@ -38,7 +40,22 @@ export async function apiRequest<T>(
 	});
 
 	if (!response.ok) {
-		throw new ApiError(response.status);
+		let validationMessage: string | undefined;
+		if (response.status === 400) {
+			try {
+				const payload: unknown = await response.json();
+				if (typeof payload === 'object' && payload !== null && 'error' in payload) {
+					const error = payload.error;
+					if (typeof error === 'object' && error !== null &&
+						'code' in error && error.code === 'VALIDATION_ERROR' &&
+						'message' in error && typeof error.message === 'string' &&
+						error.message.trim() && error.message.length <= 1000) {
+						validationMessage = error.message;
+					}
+				}
+			} catch { /* Keep the HTTP status even when the error body is unreadable. */ }
+		}
+		throw new ApiError(response.status, validationMessage);
 	}
 
 	return response.json() as Promise<T>;

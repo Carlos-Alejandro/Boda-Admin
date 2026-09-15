@@ -8,6 +8,7 @@ import { getInvitationById } from '../api/invitationService';
 import { InvitationStatusBadge } from '../components/InvitationStatusBadge';
 import { InvitationEditForm } from '../components/InvitationEditForm';
 import { InvitationCapacityForm } from '../components/InvitationCapacityForm';
+import { RestoreInvitationReplacement } from '../components/RestoreInvitationReplacement';
 import { RemoveInvitationGuest } from '../components/RemoveInvitationGuest';
 import { InvitationArchiveConfirmation } from '../components/InvitationArchiveConfirmation';
 import type { GuestType, Invitation } from '../model/invitation.types';
@@ -25,7 +26,7 @@ function formatDate(value: string | null, fallback = 'Fecha no disponible') {
 }
 
 const guestLabels: Record<GuestType, string> = {
-	known: 'Invitado', open: 'Espacio abierto', replacement: 'Reemplazo',
+	known: 'Invitado', open: 'Espacio abierto', replacement: 'Invitado de reemplazo',
 };
 
 type DetailState =
@@ -61,6 +62,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 	const [attempt, setAttempt] = useState(0);
 	const [editing, setEditing] = useState(false);
 	const [changingCapacity, setChangingCapacity] = useState(false);
+	const [restoringIndex, setRestoringIndex] = useState<number | null>(null);
 	const [removingIndex, setRemovingIndex] = useState<number | null>(null);
 	const [changingArchive, setChangingArchive] = useState(false);
 	const [notice, setNotice] = useState('');
@@ -85,7 +87,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 	}, [id, attempt]);
 
 	const invitation = state.status === 'success' ? state.invitation : null;
-	const idle = !editing && !changingCapacity && removingIndex === null && !changingArchive;
+	const idle = !editing && !changingCapacity && removingIndex === null && restoringIndex === null && !changingArchive;
 
 	return (
 		<section className="w-full text-[0.9rem]" aria-labelledby="invitation-detail-title">
@@ -164,7 +166,18 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 											</div>
 											<p className="mt-1 mb-2 text-admin-muted">{guest.name.trim() ? guest.name : 'Sin nombre asignado'}</p>
 											<p className="m-0 text-xs font-semibold text-admin-green-700">{guestLabels[guest.type]}</p>
-											{guest.type === 'replacement' && guest.originalName && <p className="mt-2 mb-0 text-xs text-admin-muted">Reemplaza a: {guest.originalName}</p>}
+											{guest.type === 'replacement' && <p className="mt-2 mb-0 text-xs text-admin-muted">Invitado original: {guest.originalName || 'Nombre no disponible'}</p>}
+											{idle && guest.type === 'replacement' && <div className="mt-3">
+												<Button variant="secondary" type="button" onClick={() => { setNotice(''); setRestoringIndex(index); }}>Restaurar invitado original</Button>
+											</div>}
+											{restoringIndex === index && <RestoreInvitationReplacement
+												invitation={invitation}
+												guestIndex={index}
+												onCancel={() => setRestoringIndex(null)}
+												onRestored={(updated) => { setState({ status: 'success', invitation: updated }); setRestoringIndex(null); setNotice('Invitado original restaurado correctamente. La respuesta de asistencia está pendiente.'); }}
+												onUnavailable={() => { setRestoringIndex(null); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
+												onRefresh={(message) => { setRestoringIndex(null); setNotice(message); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
+											/>}
 											{idle && (guest.type === 'known' || guest.type === 'open') && (
 												<div className="mt-3">
 													<Button variant="secondary" type="button" disabled={invitation.maxGuests <= 1} onClick={() => { setNotice(''); setRemovingIndex(index); }}>Eliminar invitado</Button>
