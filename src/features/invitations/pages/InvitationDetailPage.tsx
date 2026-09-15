@@ -10,6 +10,7 @@ import { InvitationEditForm } from '../components/InvitationEditForm';
 import { InvitationCapacityForm } from '../components/InvitationCapacityForm';
 import { RestoreInvitationReplacement } from '../components/RestoreInvitationReplacement';
 import { RemoveInvitationGuest } from '../components/RemoveInvitationGuest';
+import { EditInvitationGuestName } from '../components/EditInvitationGuestName';
 import { InvitationArchiveConfirmation } from '../components/InvitationArchiveConfirmation';
 import type { GuestType, Invitation } from '../model/invitation.types';
 
@@ -64,6 +65,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 	const [changingCapacity, setChangingCapacity] = useState(false);
 	const [restoringIndex, setRestoringIndex] = useState<number | null>(null);
 	const [removingIndex, setRemovingIndex] = useState<number | null>(null);
+	const [editingNameIndex, setEditingNameIndex] = useState<number | null>(null);
 	const [changingArchive, setChangingArchive] = useState(false);
 	const [notice, setNotice] = useState('');
 
@@ -87,7 +89,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 	}, [id, attempt]);
 
 	const invitation = state.status === 'success' ? state.invitation : null;
-	const idle = !editing && !changingCapacity && removingIndex === null && restoringIndex === null && !changingArchive;
+	const idle = !editing && !changingCapacity && removingIndex === null && restoringIndex === null && editingNameIndex === null && !changingArchive;
 
 	return (
 		<section className="w-full text-[0.9rem]" aria-labelledby="invitation-detail-title">
@@ -167,6 +169,17 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 											<p className="mt-1 mb-2 text-admin-muted">{guest.name.trim() ? guest.name : 'Sin nombre asignado'}</p>
 											<p className="m-0 text-xs font-semibold text-admin-green-700">{guestLabels[guest.type]}</p>
 											{guest.type === 'replacement' && <p className="mt-2 mb-0 text-xs text-admin-muted">Invitado original: {guest.originalName || 'Nombre no disponible'}</p>}
+											{idle && guest.name.trim() !== '' && <div className="mt-3">
+												<Button variant="secondary" type="button" onClick={() => { setNotice(''); setEditingNameIndex(index); }}>Editar nombre</Button>
+											</div>}
+											{editingNameIndex === index && <EditInvitationGuestName
+												invitation={invitation}
+												guestIndex={index}
+												onCancel={() => setEditingNameIndex(null)}
+												onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setEditingNameIndex(null); setNotice('Nombre del invitado actualizado correctamente.'); }}
+												onUnavailable={() => { setEditingNameIndex(null); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
+												onRefresh={(message) => { setEditingNameIndex(null); setNotice(message); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
+											/>}
 											{idle && guest.type === 'replacement' && <div className="mt-3">
 												<Button variant="secondary" type="button" onClick={() => { setNotice(''); setRestoringIndex(index); }}>Restaurar invitado original</Button>
 											</div>}

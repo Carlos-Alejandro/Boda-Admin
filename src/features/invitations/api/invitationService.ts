@@ -70,6 +70,14 @@ export function restoreInvitationReplacement(invitationId: string, guestIndex: n
 	});
 }
 
+export function updateInvitationGuestName(invitationId: string, guestIndex: number, invitationVersion: string, name: string) {
+	return apiRequest<Invitation>(`/api/admin/invitations/${encodeURIComponent(invitationId)}/guests/${guestIndex}`, {
+		method: 'PATCH',
+		headers: { 'X-Invitation-Version': invitationVersion },
+		body: JSON.stringify({ name }),
+	});
+}
+
 export function archiveInvitation(id: string) {
 	return apiRequest<Invitation>(`/api/admin/invitations/${encodeURIComponent(id)}/archive`, {
 		method: 'POST',
