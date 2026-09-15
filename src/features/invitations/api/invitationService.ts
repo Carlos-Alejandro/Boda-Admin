@@ -84,6 +84,14 @@ export function archiveInvitation(id: string) {
 	});
 }
 
+export function updateInvitationEditOverride(invitationId: string, editOverrideUntil: string | null, invitationVersion: string) {
+	return apiRequest<Invitation>(`/api/admin/invitations/${encodeURIComponent(invitationId)}`, {
+		method: 'PATCH',
+		headers: { 'X-Invitation-Version': invitationVersion },
+		body: JSON.stringify({ editOverrideUntil }),
+	});
+}
+
 export function restoreInvitation(id: string) {
 	return apiRequest<Invitation>(`/api/admin/invitations/${encodeURIComponent(id)}/restore`, {
 		method: 'POST',

@@ -11,6 +11,7 @@ import { InvitationCapacityForm } from '../components/InvitationCapacityForm';
 import { RestoreInvitationReplacement } from '../components/RestoreInvitationReplacement';
 import { RemoveInvitationGuest } from '../components/RemoveInvitationGuest';
 import { EditInvitationGuestName } from '../components/EditInvitationGuestName';
+import { EditInvitationOverride, type OverrideAction } from '../components/EditInvitationOverride';
 import { InvitationArchiveConfirmation } from '../components/InvitationArchiveConfirmation';
 import type { GuestType, Invitation } from '../model/invitation.types';
 
@@ -66,6 +67,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 	const [restoringIndex, setRestoringIndex] = useState<number | null>(null);
 	const [removingIndex, setRemovingIndex] = useState<number | null>(null);
 	const [editingNameIndex, setEditingNameIndex] = useState<number | null>(null);
+	const [overrideAction, setOverrideAction] = useState<OverrideAction | null>(null);
 	const [changingArchive, setChangingArchive] = useState(false);
 	const [notice, setNotice] = useState('');
 
@@ -89,7 +91,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 	}, [id, attempt]);
 
 	const invitation = state.status === 'success' ? state.invitation : null;
-	const idle = !editing && !changingCapacity && removingIndex === null && restoringIndex === null && editingNameIndex === null && !changingArchive;
+	const idle = !editing && !changingCapacity && removingIndex === null && restoringIndex === null && editingNameIndex === null && !changingArchive && overrideAction === null;
 
 	return (
 		<section className="w-full text-[0.9rem]" aria-labelledby="invitation-detail-title">
@@ -223,8 +225,16 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 							<DetailCard title="Configuración RSVP">
 								<dl className="m-0 grid gap-4">
 									<DetailField label="Reemplazos permitidos">{invitation.replacementsAllowed ? 'Sí' : 'No'}</DetailField>
-									<DetailField label="Edición extraordinaria hasta">{formatDate(invitation.editOverrideUntil, 'Sin permiso extraordinario')}</DetailField>
 								</dl>
+								<EditInvitationOverride
+									key={`${invitation.version}-${overrideAction}`}
+									invitation={invitation} action={overrideAction} idle={idle}
+									onSelect={(action) => { setNotice(''); setOverrideAction(action); }}
+									onCancel={() => setOverrideAction(null)}
+									onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setOverrideAction(null); setNotice(updated.editOverrideUntil === null ? 'Permiso extraordinario revocado correctamente.' : 'Permiso extraordinario actualizado correctamente.'); }}
+									onUnavailable={() => { setOverrideAction(null); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
+									onRefresh={(message) => { setOverrideAction(null); setNotice(message); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
+								/>
 							</DetailCard>
 							<DetailCard title="Archivo">
 								<dl className="m-0 grid gap-4">
