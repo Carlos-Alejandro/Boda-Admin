@@ -9,18 +9,21 @@ if (!API_BASE_URL) {
 export class ApiError extends Error {
 	readonly status: number;
 	readonly validationMessage?: string;
+	readonly code?: string;
 
-	constructor(status: number, validationMessage?: string) {
+	constructor(status: number, validationMessage?: string, code?: string) {
 		super(`La API respondió con estado ${status}.`);
 		this.name = 'ApiError';
 		this.status = status;
 		this.validationMessage = validationMessage;
+		this.code = code;
 	}
 }
 
 export async function apiRequest<T>(
 	path: string,
 	options: RequestInit = {},
+	expectedStatuses?: readonly number[],
 ): Promise<T> {
 	const user = auth.currentUser;
 
@@ -29,6 +32,7 @@ export async function apiRequest<T>(
 	}
 
 	const idToken = await user.getIdToken();
+	options.signal?.throwIfAborted();
 
 	const response = await fetch(`${API_BASE_URL}${path}`, {
 		...options,
@@ -41,12 +45,15 @@ export async function apiRequest<T>(
 
 	if (!response.ok) {
 		let validationMessage: string | undefined;
-		if (response.status === 400) {
+		let code: string | undefined;
+		if (response.status === 400 || response.status === 409) {
 			try {
 				const payload: unknown = await response.json();
 				if (typeof payload === 'object' && payload !== null && 'error' in payload) {
 					const error = payload.error;
-					if (typeof error === 'object' && error !== null &&
+					if (typeof error === 'object' && error !== null && 'code' in error &&
+						error.code === 'IDEMPOTENCY_CONFLICT') code = error.code;
+					if (response.status === 400 && typeof error === 'object' && error !== null &&
 						'code' in error && error.code === 'VALIDATION_ERROR' &&
 						'message' in error && typeof error.message === 'string' &&
 						error.message.trim() && error.message.length <= 1000) {
@@ -55,8 +62,11 @@ export async function apiRequest<T>(
 				}
 			} catch { /* Keep the HTTP status even when the error body is unreadable. */ }
 		}
-		throw new ApiError(response.status, validationMessage);
+		throw new ApiError(response.status, validationMessage, code);
 	}
 
+	if (expectedStatuses && !expectedStatuses.includes(response.status)) {
+		throw new ApiError(response.status);
+	}
 	return response.json() as Promise<T>;
 }

@@ -1,8 +1,60 @@
-# Importación XLSX — etapa 1
+# Importación XLSX — etapas 1 y 2
 
 Ruta protegida: `/invitaciones/importar`, accesible desde el listado.
-Solo lee, valida y muestra una vista previa. No realiza solicitudes de creación,
-no genera claves idempotentes y no persiste archivos ni datos personales.
+Etapa 1: lectura, validación y vista previa local, sin solicitudes de creación.
+Etapa 2: confirmación explícita y creación secuencial en memoria mediante Boda-API.
+Etapa 3 pendiente: persistencia, reanudación, reconciliación y reintentos seguros.
+No se persisten archivos, payloads, resultados ni claves fuera de memoria.
+
+## Ejecución (etapa 2)
+
+Solo se habilita Importar cuando el análisis global es válido, no hay errores
+estructurales ni de contenido y todas las filas tienen un payload válido. No se
+filtra un subconjunto de filas válidas de un archivo inválido. Las advertencias
+no bloquean. La confirmación muestra invitaciones y cupos totales; Cancelar no
+envía nada. La lectura del XLSX sigue siendo local: solo se envían payloads al confirmar.
+
+Al confirmar se copia cada `CreateInvitationInput`, conservando el orden de personas,
+y se genera una clave `boda-import-v1:<crypto.randomUUID()>` por fila. Se comprueba
+su formato y unicidad antes de enviar. Las claves viven en los elementos de ejecución,
+no en el render, el JSON, la UI ni los logs. No son IDs públicos. Cada elemento
+conserva fila original, nombre, payload, clave, estado y, cuando están confirmados,
+ID y versión de Boda-API. Se usa `createInvitation(input, { idempotencyKey, signal })`;
+la creación manual continúa sin requerir opciones ni header idempotente.
+
+Solo hay una petición en vuelo: se espera cada respuesta antes de enviar la siguiente.
+Solo HTTP 200 y 201 confirman creación; una respuesta sin ID u otro estado 2xx
+(por ejemplo, 202 Accepted), incluso con ID, se considera desconocida y detiene la secuencia.
+400, 401, 403, 409, 412 y 429 son fallos definitivos para esta ejecución. El conflicto
+`IDEMPOTENCY_CONFLICT` tiene mensaje específico. Los mensajes visibles son españoles
+y locales: el mensaje de validación existente solo verifica forma/longitud, por lo que
+el importador no reproduce texto arbitrario del backend. La normalización compartida
+de validación sigue disponible para sus consumidores anteriores.
+
+5xx, red, HTTP 408 y timeout son `unknown`: no puede determinarse con seguridad si
+el backend creó la invitación. Cada petición tiene un presupuesto técnico de 30 segundos,
+incluida la espera del token. Se aborta al agotarlo, se ignoran respuestas tardías y no
+se inicia la siguiente fila. Abortar no deshace una creación recibida por el servidor.
+
+Se detiene en el **primer fallo**, definitivo o desconocido. Las filas siguientes
+quedan `pending`/no procesadas. Una ejecución puede quedar parcialmente creada;
+no existe rollback: no se archivan, borran ni modifican las invitaciones anteriores.
+No hay retry automático ni botón de reintento. **No se debe repetir manualmente
+una operación unknown con una clave nueva**, porque podría duplicar la invitación.
+
+Un guard síncrono además de los botones deshabilitados impide doble confirmación,
+ejecuciones simultáneas y cambiar el archivo durante confirmación/creación. La misma
+vista previa no puede ejecutarse otra vez tras terminar. Seleccionar un archivo después
+de terminar limpia los resultados y abre otra sesión efímera; sus claves se generan
+solo al confirmar. Volver a seleccionar un Excel ya importado **no deduplica** sus filas:
+las claves son de ejecución, no hashes del contenido. La UI lo advierte.
+
+No se bloquea navegación global ni se usa beforeunload. Salir desmonta la página,
+aborta la petición local y evita programar más filas; la petición enviada puede haberse
+completado en el servidor. Recargar/cerrar pierde claves y resultados, sin recuperación
+en esta etapa. Conservarlos y reconciliar con la misma clave corresponde a la etapa 3.
+Requiere navegador con `crypto.randomUUID()` y contexto seguro; si falla la preparación,
+no se envía ninguna invitación. No hay límites globales de negocio.
 
 ## Dependencia
 
@@ -49,7 +101,7 @@ deben ser consecutivas desde 1, sin saltos, duplicados ni columnas vacías inter
 Se detectan todas las columnas presentes, sin un máximo de negocio.
 
 No se solicitan códigos ni identificadores manuales. No se generan IDs en el frontend.
-Boda-API seguirá generando el ID real cuando se implemente la creación.
+Boda-API genera el ID real al confirmar la creación.
 La fila Excel se conserva solo como coordenada para mostrar errores y distinguir
 elementos de la vista previa; no es un ID de invitación ni forma parte del payload.
 
@@ -126,5 +178,8 @@ Manual: iniciar sesión, abrir el listado, Importar Excel, descargar la plantill
 completar Invitaciones y seleccionarla. Los ejemplos dan 3 invitaciones, 7 personas,
 2 espacios y 9 cupos. Probar huecos, fórmulas y nombres de invitación repetidos.
 Corregir y seleccionar otro archivo debe reemplazar completamente el análisis.
-La acción Importar permanece deshabilitada incluso con un archivo válido.
-Al recargar se pierde el análisis deliberadamente: no existe almacenamiento persistente.
+Con archivo válido, Importar abre una confirmación. Las pruebas automatizadas usan
+API simulada: verifican secuencia sin concurrencia, doble submit, claves y header,
+200/201, cada fallo, timeout, resultados parciales, cambio de archivo, desmontaje,
+no creación antes de confirmar y compatibilidad de la creación manual. No crean datos reales.
+Al recargar se pierde el análisis y la ejecución: no existe almacenamiento persistente.

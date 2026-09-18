@@ -1,16 +1,19 @@
 # React + TypeScript + Vite
 
-## Importación XLSX de invitaciones (etapa 1)
+## Importación XLSX de invitaciones (etapas 1 y 2)
 
 Desde el listado, abre **Importar Excel** (`/invitaciones/importar`). La lectura,
-validación y vista previa son locales: esta etapa no crea invitaciones ni guarda
-datos del archivo. Consulta [el contrato y las pruebas](docs/invitation-import.md).
+validación y vista previa son locales. Tras confirmar un archivo completamente válido,
+se crean las invitaciones secuencialmente con claves idempotentes en memoria.
+Se detiene ante el primer fallo, sin rollback ni reintentos. No cierres ni recargues
+durante la creación; la recuperación persistente queda para la etapa 3.
+Consulta [el contrato y las pruebas](docs/invitation-import.md).
 
 Completa solo **Invitaciones**, una invitación por fila: `Invitación`, `Espacios abiertos`,
 `Permitir sustituciones`, `Invitado 1`, `Invitado 2`, etc. No escribas códigos ni IDs
 ni dejes huecos entre personas. La plantilla prepara diez columnas de personas;
 puedes agregar más consecutivamente. Los IDs reales los generará Boda-API al crear
-invitaciones en una etapa posterior. `Instrucciones` contiene ejemplos que no se importan.
+invitaciones. `Instrucciones` contiene ejemplos que no se importan.
 
 - `npm test`: pruebas del importador.
 - `npm run template:invitations`: regenera la plantilla vacía descargable.

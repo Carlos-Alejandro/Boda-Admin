@@ -30,11 +30,13 @@ export function getInvitationById(id: string, signal?: AbortSignal) {
 	});
 }
 
-export function createInvitation(input: CreateInvitationInput) {
+export function createInvitation(input: CreateInvitationInput, options: { idempotencyKey?: string; signal?: AbortSignal } = {}) {
 	return apiRequest<Invitation>('/api/admin/invitations', {
 		method: 'POST',
 		body: JSON.stringify(input),
-	});
+		...(options.idempotencyKey ? { headers: { 'Idempotency-Key': options.idempotencyKey } } : {}),
+		signal: options.signal,
+	}, options.idempotencyKey ? [200, 201] : undefined);
 }
 
 export function updateInvitation(id: string, input: UpdateInvitationInput) {
