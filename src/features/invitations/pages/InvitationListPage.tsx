@@ -76,9 +76,12 @@ export function InvitationListPage() {
 				titleId="invitations-title"
 				description="Consulta, busca y filtra las invitaciones de la boda."
 				action={(
-				<ButtonLink variant="primary" to="/invitaciones/nueva">
-					Nueva invitación
-				</ButtonLink>
+					<div className="flex flex-wrap gap-2">
+						<ButtonLink variant="secondary" to="/invitaciones/importar">Importar Excel</ButtonLink>
+						<ButtonLink variant="primary" to="/invitaciones/nueva">
+							Nueva invitación
+						</ButtonLink>
+					</div>
 			)}
 			/>
 			{response && (

@@ -1,5 +1,21 @@
 # React + TypeScript + Vite
 
+## Importación XLSX de invitaciones (etapa 1)
+
+Desde el listado, abre **Importar Excel** (`/invitaciones/importar`). La lectura,
+validación y vista previa son locales: esta etapa no crea invitaciones ni guarda
+datos del archivo. Consulta [el contrato y las pruebas](docs/invitation-import.md).
+
+Completa solo **Invitaciones**, una invitación por fila: `Invitación`, `Espacios abiertos`,
+`Permitir sustituciones`, `Invitado 1`, `Invitado 2`, etc. No escribas códigos ni IDs
+ni dejes huecos entre personas. La plantilla prepara diez columnas de personas;
+puedes agregar más consecutivamente. Los IDs reales los generará Boda-API al crear
+invitaciones en una etapa posterior. `Instrucciones` contiene ejemplos que no se importan.
+
+- `npm test`: pruebas del importador.
+- `npm run template:invitations`: regenera la plantilla vacía descargable.
+- `npm run lint` y `npm run build`: verificaciones del proyecto.
+
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
 Currently, two official plugins are available:
