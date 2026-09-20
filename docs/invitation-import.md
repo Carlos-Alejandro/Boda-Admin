@@ -1,10 +1,10 @@
-# Importación XLSX — etapas 1 y 2
+# Importación XLSX — etapas 1, 2 y 3
 
 Ruta protegida: `/invitaciones/importar`, accesible desde el listado.
 Etapa 1: lectura, validación y vista previa local, sin solicitudes de creación.
-Etapa 2: confirmación explícita y creación secuencial en memoria mediante Boda-API.
-Etapa 3 pendiente: persistencia, reanudación, reconciliación y reintentos seguros.
-No se persisten archivos, payloads, resultados ni claves fuera de memoria.
+Etapa 2: confirmación explícita y creación secuencial mediante Boda-API.
+Etapa 3: sesión local persistente, recuperación, reconciliación y continuación explícita.
+La creación manual, el contrato de Excel y las validaciones siguen sin cambios.
 
 ## Ejecución (etapa 2)
 
@@ -16,7 +16,7 @@ envía nada. La lectura del XLSX sigue siendo local: solo se envían payloads al
 
 Al confirmar se copia cada `CreateInvitationInput`, conservando el orden de personas,
 y se genera una clave `boda-import-v1:<crypto.randomUUID()>` por fila. Se comprueba
-su formato y unicidad antes de enviar. Las claves viven en los elementos de ejecución,
+su formato y unicidad antes de enviar. Las claves viven en los elementos de la sesión,
 no en el render, el JSON, la UI ni los logs. No son IDs públicos. Cada elemento
 conserva fila original, nombre, payload, clave, estado y, cuando están confirmados,
 ID y versión de Boda-API. Se usa `createInvitation(input, { idempotencyKey, signal })`;
@@ -39,22 +39,168 @@ se inicia la siguiente fila. Abortar no deshace una creación recibida por el se
 Se detiene en el **primer fallo**, definitivo o desconocido. Las filas siguientes
 quedan `pending`/no procesadas. Una ejecución puede quedar parcialmente creada;
 no existe rollback: no se archivan, borran ni modifican las invitaciones anteriores.
-No hay retry automático ni botón de reintento. **No se debe repetir manualmente
+No hay retry automático. La acción Continuar usa las claves guardadas. **No se debe repetir manualmente
 una operación unknown con una clave nueva**, porque podría duplicar la invitación.
 
 Un guard síncrono además de los botones deshabilitados impide doble confirmación,
 ejecuciones simultáneas y cambiar el archivo durante confirmación/creación. La misma
-vista previa no puede ejecutarse otra vez tras terminar. Seleccionar un archivo después
-de terminar limpia los resultados y abre otra sesión efímera; sus claves se generan
-solo al confirmar. Volver a seleccionar un Excel ya importado **no deduplica** sus filas:
-las claves son de ejecución, no hashes del contenido. La UI lo advierte.
+vista previa no puede ejecutarse otra vez tras terminar. Mientras existe una sesión,
+el selector de archivos permanece bloqueado. Primero hay que continuar, finalizar
+o descartar explícitamente la sesión. Después se exige seleccionar un archivo nuevo;
+el preview anterior no puede confirmarse otra vez accidentalmente.
 
 No se bloquea navegación global ni se usa beforeunload. Salir desmonta la página,
 aborta la petición local y evita programar más filas; la petición enviada puede haberse
-completado en el servidor. Recargar/cerrar pierde claves y resultados, sin recuperación
-en esta etapa. Conservarlos y reconciliar con la misma clave corresponde a la etapa 3.
-Requiere navegador con `crypto.randomUUID()` y contexto seguro; si falla la preparación,
-no se envía ninguna invitación. No hay límites globales de negocio.
+completado en el servidor. La recuperación no se ejecuta automáticamente.
+Requiere navegador moderno y contexto seguro; si falla la preparación,
+el almacenamiento o el bloqueo, no se envía ninguna invitación nueva.
+No hay límites globales de negocio.
+
+## Sesión persistente (etapa 3)
+
+Se eligió **IndexedDB nativo**, no localStorage: permite transacciones atómicas,
+estructuras clonadas y acceso asíncrono sin serializar todo el batch en un almacén
+síncrono de cadenas. No agrega librerías al bundle de producción. `fake-indexeddb`
+es únicamente una dependencia de desarrollo para probar el adaptador real.
+
+Base `boda-import-session`, versión de base 1, object store `sessions`, clave `active`.
+Se conserva una sesión local activa por origen del navegador; no es un límite de
+invitaciones/personas/cupos. No se sobrescribe una sesión incompleta ni completada.
+No se usan cookies, localStorage, sessionStorage, Firestore ni endpoints nuevos.
+
+Estructura del registro:
+
+```text
+formatVersion: 1
+id: UUID local del batch (no es un ID de invitación)
+filename: nombre original del archivo
+createdAt, updatedAt: fechas ISO
+apiBaseUrl: destino de Boda-API, para impedir replay hacia otro entorno
+fingerprint: SHA-256 hexadecimal
+status: incomplete | completed
+items[]:
+  row, displayName, payload: CreateInvitationInput
+  idempotencyKey
+  status: pending | creating | created | failed | unknown
+  invitationId?, version?, error? (mensaje local seguro), errorStatus? (HTTP)
+```
+
+Solo se guardan datos necesarios para la recuperación. No se guardan el binario XLSX,
+tokens, headers, datos del administrador, respuestas HTTP completas ni stack traces.
+Los nombres y claves quedan en el perfil local del navegador, sin cifrado propio.
+Otros usuarios del mismo perfil/dispositivo pueden acceder a ellos; cerrar sesión
+no borra la importación. Se debe continuar con la cuenta y el entorno originales.
+Cada POST obtiene su Firebase ID token mediante el apiClient existente; sin sesión
+autenticada, Continuar no altera el registro ni envía operaciones. No se vincula la
+sesión a un UID persistido, conforme al requisito de no guardar datos del administrador.
+
+No hay caducidad automática. La sesión dura hasta Finalizar/Descartar, salvo eliminación
+externa de datos del navegador. Completed también se conserva después de un refresh.
+Finalizar elimina solo los resultados locales y no llama API. Descartar requiere una
+confirmación visible y elimina solo la sesión local, nunca invitaciones. **Después de
+eliminar las claves, volver a importar el mismo Excel puede crear duplicados**. El
+fingerprint no conserva un historial ni garantiza deduplicación tras el descarte.
+
+### Fingerprint
+
+Web Crypto SHA-256 sobre UTF-8 de esta serialización JSON, sin espacios añadidos:
+
+```js
+JSON.stringify(['boda-import-logical:v1', inputs.map(input => [
+  input.displayName,
+  input.knownGuests.map(guest => guest.name),
+  input.openSlots,
+  input.replacementsAllowed,
+])])
+```
+
+Se usan los valores ya normalizados de Etapa 1, sin volver a cambiar nombres ni
+orden. Cuenta el orden de las invitaciones y personas, incluidos duplicados. No
+cuentan filas vacías, coordenadas físicas, filename, fecha o tamaño del archivo,
+claves, IDs ni estado de ejecución. Sirve para identificar el conjunto lógico y
+comprobar que el payload guardado no cambió; no reemplaza las claves idempotentes.
+Se valida el esquema versionado, payloads, orden de filas, unicidad de claves y
+consistencia de completed antes de restaurar. Una sesión dañada/incompatible bloquea
+la creación: no se repara ni se borra automáticamente. No es defensa contra XSS o
+manipulación maliciosa completa del almacenamiento local.
+
+### Orden de guardado y errores
+
+1. Adquirir bloqueo, releer almacenamiento y comprobar autenticación.
+2. Generar una sola vez todas las claves y el batch. Guardar el batch completo.
+3. Marcar la fila `creating` y guardar esa transición.
+4. Solo tras el evento `complete` de la transacción, enviar el POST.
+5. Conservar la respuesta normalizada en memoria y guardar resultado, ID/versión y
+   estado de sesión; solo después avanzar a la siguiente fila.
+
+Las escrituras piden `durability: strict`; se comprueba que el navegador lo admite.
+No basta con el éxito de `put`: se espera el commit de la transacción. Abrir/operar
+el almacenamiento tiene una protección técnica de 10 segundos. Un error de cuota,
+permisos, transacción abortada o base bloqueada detiene el flujo y muestra un mensaje
+seguro. No se envía el POST correspondiente si falló guardar su estado previo.
+Véase [durabilidad de transacciones IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IDBDatabase/transaction).
+
+Si falló guardar un resultado, se conserva lo conocido en memoria y no se envía la
+siguiente fila. No se afirma que sea seguro recargar. Continuar vuelve a tomar el
+bloqueo y relee el registro: puede guardar los IDs confirmados en esta pestaña que
+no llegaron al disco, sin reenviar esas filas. Si el fallo fue al guardar el último
+resultado, se ofrece Guardar resultados y continuar antes de Finalizar. Si se perdió
+la memoria, el último estado durable `creating` permite reconciliar con la misma clave.
+Si falló el primer guardado y no existe registro, no hubo POST: la sesión en memoria
+se puede descartar explícitamente; no se recrean sesiones ausentes silenciosamente.
+
+### Recuperación y reconciliación
+
+Entrar en la página lee el registro y muestra fecha, archivo, resumen y resultados,
+sin iniciar peticiones. `creating` recuperado se interpreta como `unknown`, nunca
+como pending. Comprobar sesión local permite consultar cambios de otras pestañas.
+Continuar toma el bloqueo y **relee** la sesión, sin confiar en una vista antigua.
+
+Primero procesa unknown en su orden original; usa exactamente la misma clave y
+payload contra POST /api/admin/invitations. HTTP 200 o 201 con ID confirmado resuelve
+la fila; se guarda antes de continuar. Nunca busca por displayName ni consulta
+Firestore. Después procesa pending en orden. Created se omite siempre.
+
+Un nuevo fallo detiene todo. 408/5xx/red/timeout/2xx inesperado conserva unknown.
+400/409/412 y otros rechazos no recuperables bloquean la sesión sin cambiar el payload.
+No se saltan filas fallidas. 401/403/429 permiten otro intento **explícito** mediante
+Continuar después de resolver sesión/permisos/espera, con idénticos payload y clave.
+No hay backoff ni reintento automático. Si existe un fallo bloqueante, no se envía
+ninguna otra operación de esa sesión.
+
+La marca opcional `mayHaveBeenCreated` conserva la incertidumbre de intentos previos,
+incluso si reconciliar termina en un rechazo HTTP. Solo una respuesta confirmada la
+elimina. Descartar distingue cero creaciones, IDs confirmados (con cantidades) y
+operaciones inciertas; explica la pérdida de claves y el riesgo de duplicados.
+La confirmación captura el estado revisado y lo compara bajo el bloqueo con el
+registro actual. Si otra pestaña avanzó, exige revisar y confirmar de nuevo antes
+de eliminar únicamente la sesión local. Un rechazo por bloqueo permite actualizar
+la vista con Comprobar sesión; un commit fallido conserva la evidencia en memoria.
+
+### Varias pestañas y limitaciones
+
+Web Locks API, nombre `boda-import-session:v1`, modo exclusivo, `ifAvailable: true`.
+El bloqueo cubre la ejecución completa, la creación inicial y el descarte/finalización.
+La segunda pestaña recibe un aviso; no queda en una cola que inicie POSTs después
+sin otra acción del usuario. Toda mutación vuelve a consultar el registro dentro
+del bloqueo y comprueba el ID de sesión. El store también impide sobreescrituras y
+recrear mediante update una sesión eliminada.
+Véase [Web Locks request](https://developer.mozilla.org/en-US/docs/Web/API/LockManager/request).
+
+Fallback seguro: sin Web Locks, Web Crypto, IndexedDB o durabilidad strict, no se
+permite ejecutar; no se usa un lease casero ni se continúa sin persistencia. Se
+requiere HTTPS (localhost para desarrollo) y navegador compatible. Desmontar aborta
+la petición local y evita nuevas filas; si el contexto sigue vivo intenta guardar
+su último resultado antes de liberar el bloqueo. Cerrar el proceso puede dejar
+creating en disco. Un POST recibido por el servidor puede continuar después del cierre:
+la idempotencia del backend, no el lock local, resuelve ese caso.
+
+La protección es por origen y perfil del navegador; no coordina dispositivos ni
+perfiles diferentes. El navegador/usuario puede borrar o evacuar datos, especialmente
+en modo privado: no hay garantía tras perder el almacenamiento local. La recuperación
+también depende de conservar los receipts idempotentes en Boda-API. No se implementan
+historial entre dispositivos, edición de payloads fallidos, exportación de sesiones
+ni rediseño visual (fuera de esta etapa).
 
 ## Dependencia
 
@@ -182,4 +328,8 @@ Con archivo válido, Importar abre una confirmación. Las pruebas automatizadas 
 API simulada: verifican secuencia sin concurrencia, doble submit, claves y header,
 200/201, cada fallo, timeout, resultados parciales, cambio de archivo, desmontaje,
 no creación antes de confirmar y compatibilidad de la creación manual. No crean datos reales.
-Al recargar se pierde el análisis y la ejecución: no existe almacenamiento persistente.
+El análisis sin confirmar sigue siendo efímero; después de confirmar se recupera la
+sesión normalizada. Las pruebas incluyen el escenario AAA111 / creating / pending,
+reconciliación 200 BBB222 y creación 201 CCC333 con las tres claves originales,
+fallos de almacenamiento antes/después del POST, bloqueo entre pestañas, descarte,
+completed tras refresh y reparación de resultados confirmados solo en memoria.

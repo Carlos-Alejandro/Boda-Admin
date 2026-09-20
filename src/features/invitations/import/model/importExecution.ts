@@ -12,6 +12,8 @@ export interface ImportItem {
   invitationId?: string;
   version?: string;
   error?: string;
+  errorStatus?: number;
+  mayHaveBeenCreated?: boolean;
 }
 
 export function canImport(analysis: ImportAnalysis | null): analysis is ImportAnalysis {
@@ -37,9 +39,9 @@ export function prepareImport(analysis: ImportAnalysis): ImportItem[] {
   });
 }
 
-export function creationError(error: unknown): Pick<ImportItem, 'status' | 'error'> {
+export function creationError(error: unknown): Pick<ImportItem, 'status' | 'error' | 'errorStatus' | 'mayHaveBeenCreated'> {
   if (!(error instanceof ApiError) || error.status < 400 || error.status >= 500 || error.status === 408) {
-    return { status: 'unknown', error: 'No se pudo confirmar el resultado. La invitación podría haberse creado. No repitas manualmente esta operación con una clave nueva.' };
+    return { status: 'unknown', mayHaveBeenCreated: true, errorStatus: error instanceof ApiError ? error.status : undefined, error: 'No se pudo confirmar el resultado. La invitación podría haberse creado. Continúa esta sesión para reconciliarla con la misma clave.' };
   }
   const messages: Record<number, string> = {
     400: 'La API rechazó los datos de la invitación. Revisa la información antes de continuar.',
@@ -49,7 +51,7 @@ export function creationError(error: unknown): Pick<ImportItem, 'status' | 'erro
     412: 'No se cumplen las condiciones para crear la invitación.',
     429: 'La API recibió demasiadas solicitudes. Se detuvo la importación.',
   };
-  return { status: 'failed', error: messages[error.status] ?? 'La API rechazó la creación de la invitación.' };
+  return { status: 'failed', errorStatus: error.status, error: messages[error.status] ?? 'La API rechazó la creación de la invitación.' };
 }
 
 export const CREATE_TIMEOUT_MS = 30_000;
@@ -58,17 +60,26 @@ export const CREATE_TIMEOUT_MS = 30_000;
 export async function executeImport(
   initial: ImportItem[], signal: AbortSignal, onChange: (items: ImportItem[]) => void,
   create: typeof createInvitation = createInvitation,
+  persist?: (items: ImportItem[]) => Promise<void>,
 ): Promise<void> {
   let items = initial;
-  for (let index = 0; index < items.length; index++) {
+  // Reconcile ambiguous operations before attempting any new row.
+  const order = items.map((_, index) => index).filter(index => items[index].status === 'unknown')
+    .concat(items.map((_, index) => index).filter(index => items[index].status !== 'unknown'));
+  for (const index of order) {
     if (signal.aborted) return;
     const current = items[index];
-    if (current.status !== 'pending') return;
+    if (current.status === 'created') continue;
+    if (current.status !== 'pending' && current.status !== 'unknown') return;
     const update = (patch: Partial<ImportItem>) => {
       items = items.map((item, position) => position === index ? { ...item, ...patch } : item);
       if (!signal.aborted) onChange(items);
     };
-    update({ status: 'creating' });
+    update({ status: 'creating', error: undefined, errorStatus: undefined,
+      mayHaveBeenCreated: current.status === 'unknown' || current.mayHaveBeenCreated });
+    // Storage failures deliberately escape the network error classifier.
+    if (persist) await persist(items);
+    if (signal.aborted) return;
     const request = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     let abort!: () => void;
@@ -77,19 +88,21 @@ export async function executeImport(
       signal.addEventListener('abort', abort, { once: true });
       timer = setTimeout(abort, CREATE_TIMEOUT_MS);
     });
+    let outcome: Partial<ImportItem>;
     try {
       const result = await Promise.race([
         create(current.payload, { idempotencyKey: current.idempotencyKey, signal: request.signal }), interrupted,
       ]);
-      if (signal.aborted) return;
       if (!result || typeof result.id !== 'string' || !result.id.trim()) throw new Error('Unconfirmed response');
-      update({ status: 'created', invitationId: result.id, version: result.version });
+      outcome = { status: 'created', mayHaveBeenCreated: undefined, invitationId: result.id, version: typeof result.version === 'string' ? result.version : undefined };
     } catch (error) {
-      update(creationError(error));
-      return;
+      outcome = creationError(error);
     } finally {
       clearTimeout(timer);
       signal.removeEventListener('abort', abort);
     }
+    update(outcome);
+    if (persist) await persist(items);
+    if (outcome.status !== 'created' || signal.aborted) return;
   }
 }

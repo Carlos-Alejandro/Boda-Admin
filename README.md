@@ -1,12 +1,15 @@
 # React + TypeScript + Vite
 
-## Importación XLSX de invitaciones (etapas 1 y 2)
+## Importación XLSX de invitaciones (etapas 1, 2 y 3)
 
 Desde el listado, abre **Importar Excel** (`/invitaciones/importar`). La lectura,
 validación y vista previa son locales. Tras confirmar un archivo completamente válido,
-se crean las invitaciones secuencialmente con claves idempotentes en memoria.
-Se detiene ante el primer fallo, sin rollback ni reintentos. No cierres ni recargues
-durante la creación; la recuperación persistente queda para la etapa 3.
+se guarda una sesión en IndexedDB antes de crear secuencialmente con claves idempotentes.
+Se detiene ante el primer fallo, sin rollback ni reintentos automáticos. Al regresar,
+**Continuar importación** recupera y reconcilia con las mismas claves. Los resultados
+completados se conservan hasta finalizar. Descartar elimina solo los datos locales;
+volver a importar después puede duplicar invitaciones. Requiere Web Locks y navegador
+moderno en HTTPS; no borres sus datos mientras necesites recuperar una sesión.
 Consulta [el contrato y las pruebas](docs/invitation-import.md).
 
 Completa solo **Invitaciones**, una invitación por fila: `Invitación`, `Espacios abiertos`,
