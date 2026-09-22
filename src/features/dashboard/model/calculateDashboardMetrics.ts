@@ -11,6 +11,9 @@ export interface DashboardMetrics {
  unanswered: number;
  unassignedSpaces: number;
  currentReplacements: number;
+ responded: number;
+ responseRate: number | null;
+ invitationsWithUnanswered: number;
  rsvp: Record<RsvpStatus, number>;
 }
 
@@ -24,20 +27,24 @@ export function calculateDashboardMetrics(invitations: Invitation[]): DashboardM
   archivedInvitations: archivedInvitations.length,
   currentSlots: 0, identifiedPeople: 0, attending: 0, notAttending: 0,
   unanswered: 0, unassignedSpaces: 0, currentReplacements: 0,
+  responded: 0, responseRate: null, invitationsWithUnanswered: 0,
   rsvp: { pending: 0, partial: 0, confirmed: 0, declined: 0 },
  };
  for (const invitation of activeInvitations) {
   metrics.currentSlots += invitation.maxGuests;
   metrics.rsvp[invitation.rsvpStatus] += 1;
+  if (invitation.guests.some(guest => guest.name.trim() !== '' && guest.attending === null)) metrics.invitationsWithUnanswered += 1;
   for (const guest of invitation.guests) {
    const hasName = guest.name.trim() !== '';
    if (hasName) metrics.identifiedPeople += 1;
-   if (guest.attending === true) metrics.attending += 1;
-   if (guest.attending === false) metrics.notAttending += 1;
+   if (hasName && guest.attending === true) metrics.attending += 1;
+   if (hasName && guest.attending === false) metrics.notAttending += 1;
    if (hasName && guest.attending === null) metrics.unanswered += 1;
-   if (guest.type === 'open' && !hasName && guest.attending !== true) metrics.unassignedSpaces += 1;
+   if (guest.type === 'open' && !hasName) metrics.unassignedSpaces += 1;
    if (guest.type === 'replacement') metrics.currentReplacements += 1;
   }
  }
+ metrics.responded = metrics.attending + metrics.notAttending;
+ metrics.responseRate = metrics.identifiedPeople === 0 ? null : metrics.responded / metrics.identifiedPeople * 100;
  return metrics;
 }

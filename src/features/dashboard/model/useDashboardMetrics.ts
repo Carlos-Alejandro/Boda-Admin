@@ -1,11 +1,12 @@
 ﻿import { useEffect, useRef, useState } from 'react';
 import { getInvitations } from '../../invitations/api/invitationService';
 import { calculateDashboardMetrics, type DashboardMetrics } from './calculateDashboardMetrics';
+import { buildDashboardDetails, type DashboardDetails } from './buildDashboardDetails';
 
 type DashboardState =
  | { status: 'loading' }
  | { status: 'error' }
- | { status: 'success'; metrics: DashboardMetrics };
+ | { status: 'success'; metrics: DashboardMetrics; details: DashboardDetails; consultedAt: string };
 
 export function useDashboardMetrics() {
  const [state, setState] = useState<DashboardState>({ status: 'loading' });
@@ -16,9 +17,11 @@ export function useDashboardMetrics() {
   let subscribed = true;
   // Reuse the request when StrictMode repeats effect setup in development.
   request.current ??= getInvitations();
-  void request.current.then(({ items }) => {
+  void request.current.then(({ items, total }) => {
+   // Do not silently publish partial totals if the list contract changes.
+   if (total !== items.length) throw new Error('Incomplete invitation list');
    const metrics = calculateDashboardMetrics(items);
-   if (subscribed) setState({ status: 'success', metrics });
+   if (subscribed) setState({ status: 'success', metrics, details: buildDashboardDetails(items), consultedAt: new Date().toISOString() });
   }).catch(() => {
    if (subscribed) setState({ status: 'error' });
   });

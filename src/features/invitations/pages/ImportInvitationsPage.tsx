@@ -26,19 +26,22 @@ export function ImportInvitationsPage() {
         event.target.value = '';
         if (file && execution.reset()) void selectFile(file);
       }} />
-      <p className="text-admin-muted">El XLSX se procesa localmente y no se guarda ni se sube. Al confirmar se guardan los datos normalizados y las claves en este navegador antes de enviarlos a Boda-API. Una sesión existente debe continuarse o descartarse explícitamente antes de seleccionar otro Excel.</p>
+      <p className="text-admin-muted">El XLSX se procesa localmente y no se guarda ni se sube. Al confirmar se guardan los datos normalizados y las claves en este navegador antes de enviarlos a Boda-API. Una sesión existente debe continuarse, finalizarse o descartarse explícitamente antes de seleccionar otro Excel.</p>
     </div>
     <div className="mt-4" role="status" aria-live="polite">
+      {execution.previewConsumed && !execution.session && execution.phase === 'idle' && <p>Selecciona un archivo nuevo para comenzar otra importación. Volver a importar el mismo Excel puede crear duplicados.</p>}
+      {!execution.previewConsumed && !execution.session && <>
       {state.status === 'empty' && <p>Selecciona un archivo para comenzar.</p>}
       {state.status !== 'empty' && <p className="break-words">Archivo: {state.filename}</p>}
       {state.status === 'reading' && <p>Leyendo y validando todo el archivo…</p>}
       {state.status === 'valid' && <p>Archivo válido. Revisa la vista previa y las posibles advertencias.</p>}
       {state.status === 'invalid' && <p className="text-admin-danger">Archivo con errores. Corrige las celdas indicadas y vuelve a seleccionarlo.</p>}
       {state.status === 'read-error' && <p className="text-admin-danger">{state.message}</p>}
+      </>}
     </div>
     {execution.phase === 'loading' && <p role="status">Comprobando sesión local…</p>}
-    {execution.session && <ImportSessionPanel key={execution.session.id} session={execution.session} busy={execution.phase === 'running' || execution.phase === 'loading'} storageBlocked={execution.storageBlocked} onResume={execution.resume} onRemove={execution.remove} />}
-    {(state.status === 'valid' || state.status === 'invalid') && !execution.session && <ImportPreview analysis={state.analysis} />}
+    {execution.session && <ImportSessionPanel key={execution.session.id} session={execution.session} recovered={execution.recovered} busy={execution.phase === 'running' || execution.phase === 'loading'} storageBlocked={execution.storageBlocked} onResume={execution.resume} onRemove={execution.remove} />}
+    {(state.status === 'valid' || state.status === 'invalid') && !execution.session && !execution.previewConsumed && <ImportPreview analysis={state.analysis} />}
     <div className="mt-6 space-y-3">
       <Button id="start-import" type="button" variant="primary" disabled={!execution.eligible} onClick={execution.open}>Importar invitaciones</Button>
       {execution.phase === 'confirming' && analysis && <div ref={confirmation} tabIndex={-1} role="region" aria-label="Confirmar importación" className="space-y-3 rounded-xl border border-admin-border p-4">

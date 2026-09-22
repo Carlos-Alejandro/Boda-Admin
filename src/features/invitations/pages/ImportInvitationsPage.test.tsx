@@ -151,7 +151,7 @@ describe('vista previa y creación confirmada', () => {
     expect(screen.queryByRole('button', { name: 'Crear invitaciones' })).toBeNull();
     expect(createInvitation).not.toHaveBeenCalled();
   });
-  it('doble confirmación y rerender crean una vez; bloquea selector, conserva clave y limpia al cambiar archivo', async () => {
+  it.each(['finalizar', 'descartar'])('doble confirmación crea una vez y %s oculta el preview consumido', async action => {
     let resolve!: (value: Invitation) => void;
     vi.mocked(createInvitation).mockImplementation(() => new Promise(done => { resolve = done; }));
     const view = await mount(); await ready();
@@ -168,18 +168,40 @@ describe('vista previa y creación confirmada', () => {
     view.rerender(<StrictMode><MemoryRouter><ImportInvitationsPage /></MemoryRouter></StrictMode>);
     expect(createInvitation).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Creando invitación 1 de 1')).toBeTruthy();
+    const progress = screen.getByRole('progressbar', { name: 'Progreso de importación' });
+    expect(progress.getAttribute('value')).toBe('0');
+    expect(progress.getAttribute('max')).toBe('1');
+    expect(screen.getByText('Creando invitación 1 de 1').parentElement?.getAttribute('aria-atomic')).toBe('true');
+    expect(screen.queryByText(/Sesión recuperada del almacenamiento/)).toBeNull();
     await act(async () => { resolve({ id: 'backend-id', version: 'v1' } as Invitation); });
     await screen.findByText('Importación completada');
     expect(screen.getByText('1 creadas · 0 fallidas · 0 no procesadas · 0 desconocidas')).toBeTruthy();
+    expect(progress.getAttribute('value')).toBe('1');
+    expect(screen.getByText(/Todas las invitaciones están creadas/)).toBeTruthy();
+    expect(screen.queryByText(/Continúa esta sesión/)).toBeNull();
     expect(screen.getByRole('link', { name: 'Ver invitación' }).getAttribute('href')).toBe('/invitaciones/backend-id');
     expect(document.body.textContent).not.toContain(key);
     fireEvent.click(start); expect(createInvitation).toHaveBeenCalledTimes(1);
     select('nuevo.xlsx');
     expect(screen.getByText('Importación completada')).toBeTruthy();
     expect(FakeWorker.instances).toHaveLength(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Finalizar sesión' }));
+    if (action === 'finalizar') fireEvent.click(screen.getByRole('button', { name: 'Finalizar sesión' }));
+    else {
+      fireEvent.click(screen.getByRole('button', { name: 'Descartar sesión' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Descartar de todas formas' }));
+    }
     await waitFor(() => expect(screen.queryByRole('link', { name: 'Ver invitación' })).toBeNull());
+    expect(screen.queryByText('Familia de prueba')).toBeNull();
+    expect(screen.queryByText(/Archivo válido/)).toBeNull();
+    expect(screen.getByText(/Selecciona un archivo nuevo/)).toBeTruthy();
+    expect((start as HTMLButtonElement).disabled).toBe(true);
+    expect(await importSessionStore.load()).toBeNull();
+    expect(createInvitation).toHaveBeenCalledTimes(1);
     select('nuevo.xlsx');
+    await act(async () => { await Promise.resolve(); });
+    act(() => FakeWorker.instances.at(-1)!.reply({ ok: true, analysis: analysis() }));
+    expect(screen.getByText('Familia de prueba')).toBeTruthy();
+    expect((start as HTMLButtonElement).disabled).toBe(false);
     expect(screen.queryByText('Importación completada')).toBeNull();
     expect(screen.queryByRole('link', { name: 'Ver invitación' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Crear invitaciones' })).toBeNull();
@@ -194,6 +216,12 @@ describe('vista previa y creación confirmada', () => {
     await screen.findByText('Importación detenida');
     expect(screen.getByText(status === 400 ? '1 creadas · 1 fallidas · 1 no procesadas · 0 desconocidas' : '1 creadas · 0 fallidas · 1 no procesadas · 1 desconocidas')).toBeTruthy();
     expect(screen.getAllByRole('link', { name: 'Ver invitación' })).toHaveLength(1);
+    expect(screen.getByRole('progressbar').getAttribute('value')).toBe('2');
+    expect(screen.getByRole('progressbar').getAttribute('max')).toBe('3');
+    if (status === 400) {
+      expect(screen.getByText(/La importación no puede continuar por un fallo bloqueante/)).toBeTruthy();
+      expect(screen.queryByText(/Continúa esta sesión/)).toBeNull();
+    } else expect(screen.getByText(/Continúa esta sesión para reconciliar resultados desconocidos/)).toBeTruthy();
     expect(createInvitation).toHaveBeenCalledTimes(2);
     fireEvent.click(screen.getByRole('button', { name: 'Descartar sesión' }));
     expect(screen.getByText('Ya se crearon 1 de 3 invitaciones.')).toBeTruthy();
@@ -222,6 +250,8 @@ describe('vista previa y creación confirmada', () => {
     await importSessionStore.save(session, true);
     await mount();
     expect(screen.getByText('Hay una importación pendiente')).toBeTruthy();
+    expect(screen.getByText(/Sesión recuperada del almacenamiento local/)).toBeTruthy();
+    expect(screen.queryByText('Selecciona un archivo para comenzar.')).toBeNull();
     expect(screen.getByText('Fila 2: Familia de prueba — Resultado desconocido')).toBeTruthy();
     expect(createInvitation).not.toHaveBeenCalled();
     select('nuevo.xlsx'); expect(FakeWorker.instances).toHaveLength(0);
@@ -294,7 +324,9 @@ describe('vista previa y creación confirmada', () => {
     expect(screen.getByRole('link', { name: 'Ver invitación' }).getAttribute('href')).toBe('/invitaciones/CONFIRMED');
     expect(screen.getAllByText(/No es seguro recargar/).length).toBeGreaterThan(0);
     expect((await importSessionStore.load())!.items[0].status).toBe('creating');
-    fireEvent.click(screen.getByRole('button', { name: 'Guardar resultados y continuar' }));
+    expect(screen.getByText(/Guarda los resultados locales antes de finalizar/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Finalizar sesión' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar resultados' }));
     await screen.findByText('Importación completada');
     expect(createInvitation).toHaveBeenCalledTimes(1);
     expect((await importSessionStore.load())!.items[0].invitationId).toBe('CONFIRMED');
@@ -308,6 +340,7 @@ describe('vista previa y creación confirmada', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continuar importación' }));
     await waitFor(() => expect(createInvitation).toHaveBeenCalledTimes(1));
     expect(screen.getByText('Reconciliando resultado con la misma clave…')).toBeTruthy();
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuetext')).toContain('0 de 1 procesadas');
     expect(vi.mocked(createInvitation).mock.calls[0][1]!.idempotencyKey).toBe(session.items[0].idempotencyKey);
     await act(async () => { resolve({ id: 'RECOVERED', version: 'v1' } as Invitation); });
     await screen.findByText('Importación completada');

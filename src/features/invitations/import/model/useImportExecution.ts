@@ -10,6 +10,7 @@ export function useImportExecution(analysis: ImportAnalysis | null, filename = '
   const [phase, setPhase] = useState<Phase>('loading');
   const phaseRef = useRef<Phase>('loading');
   const [session, setSession] = useState<ImportSession | null>(null);
+  const [recovered, setRecovered] = useState(false);
   const sessionRef = useRef<ImportSession | null>(null);
   const [error, setError] = useState<string>();
   const [reconciling, setReconciling] = useState(false);
@@ -48,6 +49,8 @@ export function useImportExecution(analysis: ImportAnalysis | null, filename = '
       if (!mounted.current || operation.current !== generation) return;
       // Do not discard better in-memory evidence after a failed commit.
       if (sessionRef.current && unsaved.current) return;
+      if (!stored) setRecovered(false);
+      else if (stored.id !== sessionRef.current?.id) setRecovered(true);
       showSession(stored ? recoverSession(stored) : null);
       blocked.current = false; setStorageBlocked(false); setError(undefined);
     } catch (failure) { if (mounted.current && operation.current === generation) report(failure); }
@@ -91,7 +94,7 @@ export function useImportExecution(analysis: ImportAnalysis | null, filename = '
     changePhase('running'); ++operation.current;
     try {
       await removeImportSession(expected.id, completedOnly, undefined, expected);
-      if (mounted.current) { showSession(null); setError(undefined); blocked.current = false; unsaved.current = false; setStorageBlocked(false); }
+      if (mounted.current) { showSession(null); setRecovered(false); setError(undefined); blocked.current = false; unsaved.current = false; setStorageBlocked(false); }
     } catch (failure) {
       if (mounted.current) {
         if (failure instanceof ImportSessionChangedError) showSession(failure.session);
@@ -100,7 +103,7 @@ export function useImportExecution(analysis: ImportAnalysis | null, filename = '
     }
     finally { if (mounted.current) changePhase(sessionRef.current ? 'finished' : 'idle'); }
   };
-  return { phase, session, items: session?.items ?? [], error, storageBlocked, reconciling, open, cancel,
+  return { phase, session, recovered, previewConsumed, items: session?.items ?? [], error, storageBlocked, reconciling, open, cancel,
     confirm: () => execute(false), resume: () => execute(true), remove, refresh, reset,
     fileBlocked: phase !== 'idle' || storageBlocked || !!session,
     eligible: phase === 'idle' && !storageBlocked && !session && !previewConsumed && canImport(analysis) };

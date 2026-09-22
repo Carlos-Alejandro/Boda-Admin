@@ -1,0 +1,637 @@
+/* ─────────────────────────────────────────────
+   Dashboard hero
+   ───────────────────────────────────────────── */
+
+.dashboard-hero {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 28rem);
+	align-items: start;
+	gap: 2rem;
+	padding: .35rem 0 1.15rem;
+}
+
+.dashboard-hero__intro {
+	min-width: 0;
+}
+
+.dashboard-hero__eyebrow {
+	margin: 0 0 .15rem;
+	color: var(--color-admin-gold);
+	font: 1.45rem/1.2 var(--font-admin-serif);
+}
+
+.dashboard-hero__title {
+	margin: 0;
+	color: var(--color-admin-green-900);
+	font: 500 clamp(2rem, 3.2vw, 2.7rem)/1.12 var(--font-admin-serif);
+	letter-spacing: -.025em;
+}
+
+.dashboard-hero__description {
+	max-width: 38rem;
+	margin: .55rem 0 0;
+	color: var(--color-admin-muted);
+	font-size: .86rem;
+	line-height: 1.55;
+}
+
+/* ─────────────────────────────────────────────
+   Decoración derecha del encabezado
+   ───────────────────────────────────────────── */
+
+/* One composition box; child cqw units scale against its actual width.
+ * The WEBP includes white margins: reserve its full box while aligning the ink.
+ */
+.dashboard-hero__aside {
+ position: relative;
+ justify-self: end;
+ width: min(28rem, 100%);
+ min-width: 0;
+ aspect-ratio: 28 / 11.75;
+ min-height: 9rem;
+ container-type: inline-size;
+}
+
+.dashboard-hero__date {
+ position: absolute;
+ top: 0;
+ right: .75rem;
+ max-width: calc(100% - .75rem);
+ color: var(--color-admin-muted);
+ font-size: .72rem;
+ line-height: 1.5;
+ text-align: right;
+}
+.dashboard-hero__date time { display: flex; flex-direction: column; align-items: flex-end; }
+.dashboard-hero__date strong { font-weight: 400; }
+
+.dashboard-hero__decoration { position: absolute; inset: 2.7rem 0 0; }
+.dashboard-hero__phrase {
+ position: absolute;
+ top: 0;
+ left: 5.4cqw;
+ color: var(--color-admin-green-900);
+ text-align: left;
+ display: flex;
+ flex-direction: column;
+ align-items: flex-start;
+}
+.dashboard-hero__phrase span,
+.dashboard-hero__phrase strong { font-family: var(--font-admin-script); font-weight: 400; white-space: nowrap; }
+.dashboard-hero__phrase span { font-size: clamp(1.1rem, 6.25cqw, 1.75rem); line-height: 1; }
+.dashboard-hero__phrase strong { margin-left: 5cqw; font-size: clamp(.9rem, 5.36cqw, 1.5rem); line-height: 1.1; }
+.dashboard-hero__heart {
+ position: absolute;
+ left: 2cqw;
+ top: 8cqw;
+ color: var(--color-admin-gold);
+ font-size: clamp(.7rem, 3.2cqw, .9rem);
+ line-height: 1;
+}
+.dashboard-hero__branch {
+	position: absolute;
+	right: 0;
+	top: 2.05rem;
+	width: 5.4rem;
+	height: auto;
+	object-fit: contain;
+	mix-blend-mode: multiply;
+	pointer-events: none;
+	user-select: none;
+}
+
+/* ─────────────────────────────────────────────
+   Dashboard content
+   ───────────────────────────────────────────── */
+
+.dashboard-content {
+	margin-top: .35rem;
+}
+
+.dashboard-note {
+	color: var(--color-admin-muted);
+	font-size: .78rem;
+	line-height: 1.5;
+	margin: .2rem 0 .65rem;
+}
+
+/* ─────────────────────────────────────────────
+   Stats
+   ───────────────────────────────────────────── */
+
+.dashboard-stats {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 1rem;
+}
+
+.dashboard-stat,
+.dashboard-panel {
+	min-width: 0;
+	background: var(--color-surface);
+	border: 1px solid var(--color-admin-border);
+	border-radius: 1rem;
+	padding: 1.1rem;
+}
+
+.dashboard-stat {
+	background: linear-gradient(135deg, var(--color-surface), #fbf9f4);
+}
+
+.dashboard-stat-top {
+	display: flex;
+	align-items: center;
+	gap: .8rem;
+	min-height: 4.25rem;
+}
+
+.dashboard-stat h2 {
+	font-size: .8rem;
+	font-weight: 500;
+	margin: 0;
+}
+
+.dashboard-value {
+	font: 2.5rem/1.2 var(--font-admin-serif);
+	margin: .3rem 0 0;
+	font-variant-numeric: tabular-nums;
+}
+
+.dashboard-no-rate {
+	font-size: .85rem;
+	margin: .5rem 0;
+}
+
+.dashboard-stat-foot {
+	border-top: 1px solid #ece7dc;
+	padding-top: .6rem;
+	margin: .55rem 0 0;
+	font-size: .76rem;
+	color: #536258;
+	line-height: 1.55;
+}
+
+.dashboard-stat-foot p {
+	margin: 0;
+}
+
+/* ─────────────────────────────────────────────
+   Icons
+   ───────────────────────────────────────────── */
+
+.dashboard-icon {
+	display: inline-flex;
+	flex: 0 0 3rem;
+	width: 3rem;
+	height: 3rem;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	background: #e9eddc;
+	color: #426748;
+}
+
+.dashboard-icon svg {
+	width: 1.6rem;
+	height: 1.6rem;
+}
+
+.dashboard-icon-invitation,
+.dashboard-icon-progress {
+	background: #f2ecdc;
+	color: #97783e;
+}
+
+/* ─────────────────────────────────────────────
+   Progress
+   ───────────────────────────────────────────── */
+
+.dashboard-progress {
+	display: block;
+	width: 100%;
+	height: .65rem;
+	margin-top: .7rem;
+	appearance: none;
+	border: 0;
+	border-radius: 1rem;
+	overflow: hidden;
+	background: #eae7df;
+	accent-color: #537b57;
+}
+
+.dashboard-progress::-webkit-progress-bar {
+	background: #eae7df;
+	border-radius: 1rem;
+}
+
+.dashboard-progress::-webkit-progress-value {
+	background: linear-gradient(90deg, #537b57, #8a9f7d);
+	border-radius: 1rem;
+}
+
+.dashboard-progress::-moz-progress-bar {
+	background: #537b57;
+	border-radius: 1rem;
+}
+
+/* ─────────────────────────────────────────────
+   Dashboard grids
+   ───────────────────────────────────────────── */
+
+.dashboard-middle,
+.dashboard-lists,
+.dashboard-bottom {
+	display: grid;
+	gap: 1rem;
+	margin-top: 1rem;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+}
+
+.dashboard-lists {
+	grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+}
+
+.dashboard-bottom {
+	grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+}
+
+/* ─────────────────────────────────────────────
+   Panels
+   ───────────────────────────────────────────── */
+
+.dashboard-panel h2 {
+	font: 1.35rem/1.3 var(--font-admin-serif);
+	margin: 0 0 .35rem;
+}
+
+.dashboard-panel-heading {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: .5rem;
+	flex-wrap: wrap;
+}
+
+.dashboard-panel-heading > a {
+	font-size: .75rem;
+}
+
+/* ─────────────────────────────────────────────
+   Distribution chart
+   ───────────────────────────────────────────── */
+
+.dashboard-distribution {
+	display: flex;
+	align-items: center;
+	justify-content: space-around;
+	flex-wrap: wrap;
+	gap: 1rem;
+	padding: .3rem 0;
+}
+
+.dashboard-ring {
+	position: relative;
+	width: 11rem;
+	max-width: 100%;
+	flex-shrink: 0;
+}
+
+.dashboard-ring svg {
+	display: block;
+	width: 100%;
+}
+
+.dashboard-ring p {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	margin: 0;
+}
+
+.dashboard-ring strong {
+	font: 2rem var(--font-admin-serif);
+}
+
+.dashboard-ring p span {
+	max-width: 6rem;
+	text-align: center;
+	font-size: .75rem;
+}
+
+.dashboard-legend {
+	flex: 1;
+	min-width: 9rem;
+	margin: 0;
+}
+
+.dashboard-legend > div {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: .55rem 0;
+	border-bottom: 1px solid #eee9de;
+}
+
+.dashboard-legend dt {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+}
+
+.dashboard-legend dt span {
+	width: .65rem;
+	height: .65rem;
+	border-radius: 50%;
+}
+
+.dashboard-legend dd {
+	margin: 0;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+/* ─────────────────────────────────────────────
+   Bars and lists
+   ───────────────────────────────────────────── */
+
+.dashboard-bars,
+.dashboard-person-list,
+.dashboard-recent-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.dashboard-bars {
+	display: grid;
+	gap: .6rem;
+	padding-top: .15rem;
+}
+
+.dashboard-bars li {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: .2rem .75rem;
+}
+
+.dashboard-bars a {
+	grid-column: 1 / -1;
+	font-size: .8rem;
+	display: flex;
+	align-items: center;
+	min-height: 1.5rem;
+}
+
+.dashboard-bar-track {
+	height: .65rem;
+	border-radius: 3px;
+	background: #eeeee7;
+	overflow: hidden;
+}
+
+.dashboard-bar-track span {
+	display: block;
+	height: 100%;
+	background: linear-gradient(90deg, #53765a, #8ca18a);
+	border-radius: inherit;
+}
+
+.dashboard-bar-value {
+	font-variant-numeric: tabular-nums;
+	font-size: .8rem;
+	min-width: 4rem;
+	text-align: right;
+}
+
+.dashboard-bar-value span {
+	font-size: .7rem;
+	color: var(--color-admin-muted);
+}
+
+.dashboard-panel a:focus-visible {
+	outline: 2px solid var(--color-admin-gold);
+	outline-offset: 3px;
+}
+
+.dashboard-bars a,
+.dashboard-person-list a,
+.dashboard-recent-list a {
+	text-decoration: underline;
+	text-decoration-color: #c6cbbc;
+	text-underline-offset: 3px;
+	overflow-wrap: anywhere;
+}
+
+.dashboard-person-list li,
+.dashboard-recent-list li {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: .7rem;
+	border-top: 1px solid #eee9de;
+	padding: .65rem 0;
+}
+
+.dashboard-person-list li > div,
+.dashboard-recent-list li > div {
+	flex: 1;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.dashboard-person-list strong {
+	display: block;
+	font-size: .85rem;
+	font-weight: 600;
+}
+
+.dashboard-person-list a,
+.dashboard-recent-list time {
+	display: block;
+	font-size: .75rem;
+	color: var(--color-admin-muted);
+	margin-top: .35rem;
+}
+
+.dashboard-pending {
+	border-radius: 1rem;
+	background: #f2eddf;
+	color: #76602c;
+	font-size: .72rem;
+	padding: .25rem .6rem;
+}
+
+/* ─────────────────────────────────────────────
+   Quick actions
+   ───────────────────────────────────────────── */
+
+.dashboard-quick {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: .65rem;
+	margin-top: 1rem;
+}
+
+.dashboard-quick > a {
+	display: flex;
+	flex-direction: column;
+	text-align: center;
+	padding: 1rem .5rem;
+	background: #faf8f2;
+	border-color: #e7e1d4;
+	gap: .4rem;
+}
+
+.dashboard-quick .dashboard-icon {
+	border-radius: 0;
+	background: transparent;
+	color: var(--color-admin-green-900);
+}
+
+.dashboard-quick strong {
+	font-size: .85rem;
+	font-weight: 500;
+}
+
+.dashboard-quick > a > span:last-child {
+	font-size: .73rem;
+	font-weight: 400;
+	color: var(--color-admin-muted);
+}
+
+/* ─────────────────────────────────────────────
+   Follow-up
+   ───────────────────────────────────────────── */
+
+.dashboard-follow {
+	margin: .8rem 0;
+}
+
+.dashboard-follow > div {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin: .8rem 0;
+	font-size: .8rem;
+}
+
+.dashboard-follow dd {
+	margin: 0;
+	background: #efe7d5;
+	border-radius: 1rem;
+	padding: .1rem .5rem;
+	font-variant-numeric: tabular-nums;
+}
+
+/* ─────────────────────────────────────────────
+   Empty / placeholder states
+   ───────────────────────────────────────────── */
+
+.dashboard-placeholder {
+	color: var(--color-admin-muted);
+	padding: 2rem 0;
+	font-size: .85rem;
+}
+
+.dashboard-empty {
+	padding: 1rem;
+	background: var(--color-surface);
+	border: 1px dashed var(--color-admin-gold);
+	border-radius: 1rem;
+	margin-bottom: 1rem;
+}
+
+.dashboard-inline-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .75rem;
+	margin-top: 1rem;
+}
+
+.dashboard-scope,
+.dashboard-help {
+	color: var(--color-admin-muted);
+	font-size: .72rem;
+	line-height: 1.5;
+}
+
+.dashboard-scope {
+	margin: .4rem .15rem 0;
+}
+
+.dashboard-help {
+	margin: .35rem 0 0;
+}
+
+/* ─────────────────────────────────────────────
+   Responsive
+   ───────────────────────────────────────────── */
+
+@media (max-width: 75rem) {
+	.dashboard-stats {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.dashboard-middle,
+	.dashboard-lists,
+	.dashboard-bottom {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+@media (max-width: 48rem) {
+	.dashboard-hero {
+		grid-template-columns: minmax(0, 1fr);
+		gap: .8rem;
+		padding-bottom: 1rem;
+	}
+
+
+
+
+
+}
+
+@media (max-width: 36rem) {
+	.dashboard-stats,
+	.dashboard-quick {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.dashboard-stat,
+	.dashboard-panel {
+		padding: 1rem;
+	}
+
+	.dashboard-content {
+		overflow-wrap: anywhere;
+	}
+
+	.dashboard-hero__title {
+		font-size: 2rem;
+	}
+
+	.dashboard-hero__eyebrow {
+		font-size: 1.3rem;
+	}
+
+	.dashboard-hero__description {
+		font-size: .82rem;
+	}
+
+
+
+
+
+
+
+}
+@media (max-width: 70rem) {
+ .dashboard-hero { grid-template-columns: minmax(0, 1fr); gap: .8rem; }
+}

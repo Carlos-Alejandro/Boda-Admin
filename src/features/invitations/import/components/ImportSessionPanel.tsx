@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '../../../../shared/components/Button/Button';
 import { hasUnconfirmedCreation, retryableFailure, type ImportSession } from '../model/importSession';
 
-export function ImportSessionPanel({ session, busy, storageBlocked, onResume, onRemove }: {
-  session: ImportSession; busy: boolean; storageBlocked: boolean; onResume: () => Promise<void>; onRemove: (completedOnly: boolean, expected: ImportSession) => Promise<void>;
+export function ImportSessionPanel({ session, recovered, busy, storageBlocked, onResume, onRemove }: {
+  session: ImportSession; recovered: boolean; busy: boolean; storageBlocked: boolean; onResume: () => Promise<void>; onRemove: (completedOnly: boolean, expected: ImportSession) => Promise<void>;
 }) {
   const [confirmDiscard, setConfirmDiscard] = useState<ImportSession | null>(null);
   const title = useRef<HTMLParagraphElement>(null);
@@ -12,15 +12,17 @@ export function ImportSessionPanel({ session, busy, storageBlocked, onResume, on
   const created = confirmDiscard?.items.filter(item => item.status === 'created').length ?? 0;
   const uncertain = confirmDiscard?.items.filter(hasUnconfirmedCreation).length ?? 0;
   return <section aria-label="Sesión local de importación" className="mt-4 space-y-3 rounded-xl border border-admin-border bg-surface p-4">
+    {recovered && <p role="status">Sesión recuperada del almacenamiento local de este navegador. La recuperación no inicia envíos automáticos.</p>}
     <h2 className="font-bold">{session.status === 'completed' ? storageBlocked ? 'Resultados pendientes de guardar' : 'Resultados conservados en este navegador' : 'Hay una importación pendiente'}</h2>
     <p className="break-words">Archivo: {session.filename} · {session.items.length} invitaciones</p>
     <p>Inicio: {new Date(session.createdAt).toLocaleString()} · Última actualización: {new Date(session.updatedAt).toLocaleString()}</p>
-    <p>Los nombres y resultados se conservan en este navegador/dispositivo hasta finalizar o descartar la sesión. No se guardan credenciales. Continúa con la cuenta y el entorno de la importación original.</p>
+    <p>Los nombres y resultados se conservan en este navegador/dispositivo hasta finalizar o descartar la sesión. No se guardan credenciales. Para reanudar, usa la cuenta y el entorno de la importación original.</p>
+    {session.status === 'completed' && !storageBlocked && <p>Finalizar elimina únicamente los resultados y las claves locales; las invitaciones creadas se conservan. Volver a importar el mismo Excel puede crear duplicados.</p>}
     {blocked && <p role="alert">Existe un fallo bloqueante. No se cambiarán sus datos ni claves y no se procesarán filas posteriores. Revisa el resultado antes de descartar.</p>}
     {!confirmDiscard && <div className="flex flex-wrap gap-3">
       {session.status === 'completed' && !storageBlocked
         ? <Button type="button" variant="primary" disabled={busy} onClick={() => { void onRemove(true, session); }}>Finalizar sesión</Button>
-        : <Button type="button" variant="primary" disabled={busy || (blocked && !storageBlocked)} onClick={() => { void onResume(); }}>{session.status === 'completed' ? 'Guardar resultados y continuar' : 'Continuar importación'}</Button>}
+        : <Button type="button" variant="primary" disabled={busy || (blocked && !storageBlocked)} onClick={() => { void onResume(); }}>{session.status === 'completed' ? 'Guardar resultados' : 'Continuar importación'}</Button>}
       <Button type="button" variant="secondary" disabled={busy} onClick={() => setConfirmDiscard(structuredClone(session))}>Descartar sesión</Button>
     </div>}
     {confirmDiscard && <div className="space-y-3">

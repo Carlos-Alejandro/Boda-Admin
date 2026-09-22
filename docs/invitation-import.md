@@ -1,4 +1,4 @@
-# Importación XLSX — etapas 1, 2 y 3
+# Importación XLSX — etapas 1, 2, 3 y 4
 
 Ruta protegida: `/invitaciones/importar`, accesible desde el listado.
 Etapa 1: lectura, validación y vista previa local, sin solicitudes de creación.
@@ -144,7 +144,7 @@ Si falló guardar un resultado, se conserva lo conocido en memoria y no se enví
 siguiente fila. No se afirma que sea seguro recargar. Continuar vuelve a tomar el
 bloqueo y relee el registro: puede guardar los IDs confirmados en esta pestaña que
 no llegaron al disco, sin reenviar esas filas. Si el fallo fue al guardar el último
-resultado, se ofrece Guardar resultados y continuar antes de Finalizar. Si se perdió
+resultado, se ofrece Guardar resultados antes de Finalizar. Si se perdió
 la memoria, el último estado durable `creating` permite reconciliar con la misma clave.
 Si falló el primer guardado y no existe registro, no hubo POST: la sesión en memoria
 se puede descartar explícitamente; no se recrean sesiones ausentes silenciosamente.
@@ -333,3 +333,26 @@ sesión normalizada. Las pruebas incluyen el escenario AAA111 / creating / pendi
 reconciliación 200 BBB222 y creación 201 CCC333 con las tres claves originales,
 fallos de almacenamiento antes/después del POST, bloqueo entre pestañas, descarte,
 completed tras refresh y reparación de resultados confirmados solo en memoria.
+
+## Ajustes de interfaz (etapa 4)
+
+La vista previa consumida y sus mensajes se ocultan después de Finalizar o Descartar.
+Se exige seleccionar otro archivo para mostrar una nueva vista previa. Las sesiones
+restauradas se identifican como recuperadas del almacenamiento local; leerlas no
+inicia envíos. El éxito completo ofrece revisar detalles, volver al listado o
+finalizar. Si falta guardar resultados, Guardar resultados conserva los IDs
+confirmados sin otro POST. Los fallos bloqueantes no recomiendan continuar.
+Finalizar explica que elimina solo los resultados y claves locales y advierte
+del riesgo de repetir el Excel.
+
+El progreso muestra X / total procesadas, estados por fila en texto y un elemento
+progress con nombre y descripción accesibles. Procesadas incluye creadas, fallidas
+y desconocidas; no equivale a creadas correctamente. Durante una reconciliación,
+la fila activa vuelve a estar en proceso. El resumen usa status, aria-live polite
+y aria-atomic. No se modifican el almacenamiento ni el motor de ejecución.
+
+Manual: finalizar y descartar comprobando que no reaparece el preview; seleccionar
+otro Excel. Volver a la ruta con una sesión pendiente o completada y comprobar
+el aviso de recuperación sin envíos automáticos. Revisar con lector de pantalla
+el progreso, la reconciliación y la detención. Verificar que Finalizar y Descartar
+conservan las invitaciones del listado y que los enlaces abren su detalle.
