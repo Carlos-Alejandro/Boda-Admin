@@ -4,10 +4,10 @@
 
 .dashboard-hero {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(0, 28rem);
+	grid-template-columns: minmax(0, 1fr) minmax(0, 25rem);
 	align-items: start;
 	gap: 2rem;
-	padding: .35rem 0 1.15rem;
+	padding: .35rem 0 0;
 }
 
 .dashboard-hero__intro {
@@ -45,31 +45,31 @@
 .dashboard-hero__aside {
  position: relative;
  justify-self: end;
- width: min(28rem, 100%);
+ width: min(25rem, 100%);
  min-width: 0;
- aspect-ratio: 28 / 11.75;
- min-height: 9rem;
+ aspect-ratio: 25 / 10;
  container-type: inline-size;
 }
 
 .dashboard-hero__date {
  position: absolute;
  top: 0;
- right: .75rem;
- max-width: calc(100% - .75rem);
+ right: 1rem;
+ max-width: calc(100% - 1rem);
  color: var(--color-admin-muted);
- font-size: .72rem;
+ font-size: .8125rem;
  line-height: 1.5;
  text-align: right;
 }
 .dashboard-hero__date time { display: flex; flex-direction: column; align-items: flex-end; }
 .dashboard-hero__date strong { font-weight: 400; }
+.dashboard-hero__date time > span::first-letter { text-transform: uppercase; }
 
-.dashboard-hero__decoration { position: absolute; inset: 2.7rem 0 0; }
+.dashboard-hero__decoration { position: absolute; inset: 2.75rem 0 0; }
 .dashboard-hero__phrase {
  position: absolute;
  top: 0;
- left: 5.4cqw;
+ left: 6cqw;
  color: var(--color-admin-green-900);
  text-align: left;
  display: flex;
@@ -78,21 +78,21 @@
 }
 .dashboard-hero__phrase span,
 .dashboard-hero__phrase strong { font-family: var(--font-admin-script); font-weight: 400; white-space: nowrap; }
-.dashboard-hero__phrase span { font-size: clamp(1.1rem, 6.25cqw, 1.75rem); line-height: 1; }
-.dashboard-hero__phrase strong { margin-left: 5cqw; font-size: clamp(.9rem, 5.36cqw, 1.5rem); line-height: 1.1; }
+.dashboard-hero__phrase span { font-size: 7cqw; line-height: 1; }
+.dashboard-hero__phrase strong { margin-left: 6cqw; font-size: 6cqw; line-height: 1.1; }
 .dashboard-hero__heart {
  position: absolute;
- left: 2cqw;
- top: 8cqw;
+ left: 1cqw;
+ top: 11cqw;
  color: var(--color-admin-gold);
- font-size: clamp(.7rem, 3.2cqw, .9rem);
+ font-size: 4cqw;
  line-height: 1;
 }
 .dashboard-hero__branch {
 	position: absolute;
 	right: 0;
-	top: 2.05rem;
-	width: 5.4rem;
+	bottom: 0;
+	width: 18cqw;
 	height: auto;
 	object-fit: contain;
 	mix-blend-mode: multiply;

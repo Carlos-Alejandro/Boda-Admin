@@ -2,6 +2,7 @@ import { type FormEvent, useRef, useState } from 'react';
 
 import { Button, ButtonLink } from '../../../shared/components/Button/Button';
 import { PageHeader } from '../../../shared/components/PageHeader/PageHeader';
+import { notify } from '../../../shared/notifications/notify';
 import { createInvitation } from '../api/invitationService';
 import { CreationSuccess } from '../components/CreationSuccess';
 import { InvitationSummary } from '../components/InvitationSummary';
@@ -104,8 +105,14 @@ export function CreateInvitationPage() {
 			const invitation = await createInvitation(input);
 			setCreatedInvitation(invitation);
 			setStatus('success');
+			notify.success('Invitación creada', {
+				description: 'La invitación se creó correctamente.',
+			});
 		} catch {
 			setStatus('error');
+			notify.error('No se pudo crear la invitación', {
+				description: 'Revisa los datos e inténtalo nuevamente.',
+			});
 		} finally {
 			submittingRef.current = false;
 		}
@@ -270,11 +277,6 @@ export function CreateInvitationPage() {
 
 					{errors.capacity && (
 						<p className="create-invitation-form__alert">{errors.capacity}</p>
-					)}
-					{status === 'error' && (
-						<p className="create-invitation-form__alert" role="alert">
-							No fue posible crear la invitación.
-						</p>
 					)}
 
 					<div className="create-invitation-form__actions">

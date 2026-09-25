@@ -20,6 +20,9 @@ describe('Dashboard funcional', () => {
   vi.mocked(getInvitations).mockReturnValue(new Promise(done => { resolve = done; }));
   mount();
   expect(screen.getByRole('status').textContent).toContain('Cargando');
+  const decoration = document.querySelector('.dashboard-hero__decoration');
+  expect(decoration).toBeTruthy();
+  expect(decoration?.querySelector('.dashboard-hero__branch')).toBeTruthy();
   expect(screen.queryByRole('group', { name: 'Resumen en cuatro tarjetas' })).toBeNull();
   expect(getInvitations).toHaveBeenCalledTimes(1);
   expect(getInvitations).toHaveBeenCalledWith();

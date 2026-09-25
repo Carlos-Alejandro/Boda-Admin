@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { ApiError } from '../../../services/http/apiClient';
 import { Button, ButtonLink } from '../../../shared/components/Button/Button';
 import { PageHeader } from '../../../shared/components/PageHeader/PageHeader';
+import { notify } from '../../../shared/notifications/notify';
 import { getInvitationById } from '../api/invitationService';
 import { InvitationStatusBadge } from '../components/InvitationStatusBadge';
 import { InvitationEditForm } from '../components/InvitationEditForm';
@@ -133,7 +134,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 					{editing && <InvitationEditForm
 						invitation={invitation}
 						onCancel={() => setEditing(false)}
-						onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setEditing(false); setNotice('Invitación actualizada correctamente.'); }}
+						onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setEditing(false); notify.success('Cambios guardados', { description: 'La invitación se actualizó correctamente.' }); }}
 						onUnavailable={() => { setEditing(false); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
 						onReload={() => { setEditing(false); setNotice(''); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
 					/>}
@@ -152,7 +153,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 					{changingCapacity && <InvitationCapacityForm
 						invitation={invitation}
 						onCancel={() => setChangingCapacity(false)}
-						onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setChangingCapacity(false); setNotice('Capacidad actualizada correctamente.'); }}
+						onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setChangingCapacity(false); notify.success('Capacidad actualizada', { description: 'La capacidad de la invitación se guardó correctamente.' }); }}
 						onUnavailable={() => { setChangingCapacity(false); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
 						onReload={() => { setChangingCapacity(false); setNotice(''); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
 					/>}
@@ -178,7 +179,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 												invitation={invitation}
 												guestIndex={index}
 												onCancel={() => setEditingNameIndex(null)}
-												onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setEditingNameIndex(null); setNotice('Nombre del invitado actualizado correctamente.'); }}
+												onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setEditingNameIndex(null); notify.success('Nombre actualizado', { description: 'El nombre del invitado se guardó correctamente.' }); }}
 												onUnavailable={() => { setEditingNameIndex(null); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
 												onRefresh={(message) => { setEditingNameIndex(null); setNotice(message); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
 											/>}
@@ -189,7 +190,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 												invitation={invitation}
 												guestIndex={index}
 												onCancel={() => setRestoringIndex(null)}
-												onRestored={(updated) => { setState({ status: 'success', invitation: updated }); setRestoringIndex(null); setNotice('Invitado original restaurado correctamente. La respuesta de asistencia está pendiente.'); }}
+												onRestored={(updated) => { setState({ status: 'success', invitation: updated }); setRestoringIndex(null); notify.success('Invitado original restaurado', { description: 'La respuesta de asistencia volvió a quedar pendiente.' }); }}
 												onUnavailable={() => { setRestoringIndex(null); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
 												onRefresh={(message) => { setRestoringIndex(null); setNotice(message); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
 											/>}
@@ -203,7 +204,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 												invitation={invitation}
 												guestIndex={index}
 												onCancel={() => setRemovingIndex(null)}
-												onRemoved={(updated) => { setState({ status: 'success', invitation: updated }); setRemovingIndex(null); setNotice('Invitado eliminado correctamente.'); }}
+												onRemoved={(updated) => { setState({ status: 'success', invitation: updated }); setRemovingIndex(null); notify.success('Invitado eliminado', { description: 'La capacidad de la invitación se actualizó correctamente.' }); }}
 												onUnavailable={() => { setRemovingIndex(null); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
 												onRefresh={(message) => { setRemovingIndex(null); setNotice(message); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
 											/>}
@@ -231,7 +232,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 									invitation={invitation} action={overrideAction} idle={idle}
 									onSelect={(action) => { setNotice(''); setOverrideAction(action); }}
 									onCancel={() => setOverrideAction(null)}
-									onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setOverrideAction(null); setNotice(updated.editOverrideUntil === null ? 'Permiso extraordinario revocado correctamente.' : 'Permiso extraordinario actualizado correctamente.'); }}
+									onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setOverrideAction(null); notify.success(updated.editOverrideUntil === null ? 'Permiso revocado' : 'Permiso actualizado', { description: 'El permiso extraordinario RSVP se guardó correctamente.' }); }}
 									onUnavailable={() => { setOverrideAction(null); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
 									onRefresh={(message) => { setOverrideAction(null); setNotice(message); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
 								/>
@@ -245,7 +246,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 								{changingArchive && <InvitationArchiveConfirmation
 									invitation={invitation}
 									onCancel={() => setChangingArchive(false)}
-									onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setChangingArchive(false); setNotice(invitation.isArchived ? 'Invitación restaurada correctamente.' : 'Invitación archivada correctamente.'); }}
+									onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setChangingArchive(false); }}
 									onUnavailable={() => { setChangingArchive(false); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
 									onRefresh={(message) => { setChangingArchive(false); setNotice(message); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
 								/>}

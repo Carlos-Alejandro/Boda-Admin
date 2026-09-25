@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { ApiError } from '../../../services/http/apiClient';
 import { Button } from '../../../shared/components/Button/Button';
+import { notify } from '../../../shared/notifications/notify';
 import { archiveInvitation, restoreInvitation } from '../api/invitationService';
 import type { Invitation } from '../model/invitation.types';
 
@@ -49,9 +50,17 @@ export function InvitationArchiveConfirmation({ invitation, onCancel, onSaved, o
 		let refreshing = false;
 		try {
 			const updated = await (restoring ? restoreInvitation(invitation.id) : archiveInvitation(invitation.id));
-			if (mounted.current) onSaved(updated);
+			if (mounted.current) {
+				notify.success(restoring ? 'Invitación restaurada' : 'Invitación archivada', {
+					description: restoring ? 'La invitación volvió a estar activa.' : 'La invitación dejó de estar disponible para el invitado.',
+				});
+				onSaved(updated);
+			}
 		} catch (operationError) {
 			if (!mounted.current) return;
+			notify.error(restoring ? 'No se pudo restaurar la invitación' : 'No se pudo archivar la invitación', {
+				description: 'Revisa el estado de la invitación e inténtalo nuevamente.',
+			});
 			if (operationError instanceof ApiError && operationError.status === 404) {
 				onUnavailable();
 			} else if (operationError instanceof ApiError && operationError.status === 400) {
