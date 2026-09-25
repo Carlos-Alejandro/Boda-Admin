@@ -116,12 +116,27 @@
 	position: relative;
 	flex: 0 0 auto;
 	z-index: 70;
-	width: 8rem;
+	width: 8.5rem;
 }
 
 .invitation-toolbar__filter {
-	width: 8rem;
+	width: 8.5rem;
 	gap: .55rem;
+}
+.invitation-toolbar__filter-count {
+	display: inline-grid;
+	flex: 0 0 1.35rem;
+	min-width: 1.35rem;
+	height: 1.35rem;
+	place-items: center;
+	border: 1px solid rgba(169, 132, 69, .42);
+	border-radius: 999px;
+	background: #efe3ca;
+	color: #71572d;
+	font-family: var(--font-admin-sans);
+	font-size: .68rem;
+	font-weight: 800;
+	line-height: 1;
 }
 .invitation-toolbar__import { width: 9.8rem; gap: .55rem; }
 .invitation-toolbar__filter--active {
@@ -282,6 +297,126 @@
 	text-align: center;
 }
 .invitation-list-state--error { color: var(--color-admin-danger); }
+
+.invitation-empty {
+	display: grid;
+	justify-items: center;
+	gap: .8rem;
+	margin-top: .75rem;
+	border: 1px dashed #d7d0c2;
+	border-radius: .85rem;
+	background: rgba(255, 254, 250, .68);
+	padding: clamp(2rem, 5vw, 3.5rem) 1.25rem;
+	text-align: center;
+}
+
+.invitation-empty__icon {
+	display: grid;
+	width: 3.2rem;
+	height: 3.2rem;
+	place-items: center;
+	border: 1px solid #ddcfb3;
+	border-radius: 50%;
+	background: #f7efdf;
+	color: #896b38;
+}
+
+.invitation-empty__icon svg {
+	width: 1.45rem;
+	height: 1.45rem;
+	fill: none;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 1.45;
+}
+
+.invitation-empty h2 {
+	margin: 0;
+	font-family: var(--font-admin-serif);
+	font-size: clamp(1.2rem, 2vw, 1.45rem);
+	font-weight: 500;
+}
+
+.invitation-empty p {
+	max-width: 32rem;
+	margin: .35rem 0 0;
+	color: var(--color-admin-muted);
+	font-size: .86rem;
+	line-height: 1.55;
+}
+
+.invitation-empty__actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: .65rem;
+	margin-top: .2rem;
+}
+
+.invitation-skeleton {
+	margin-top: .75rem;
+}
+
+.invitation-skeleton__visual {
+	display: grid;
+	gap: .16rem;
+}
+
+.invitation-skeleton__header,
+.invitation-skeleton__row {
+	display: grid;
+	grid-template-columns: 2.5fr 1.1fr 1fr 1.2fr 1.3fr .8fr 2.1fr;
+}
+
+.invitation-skeleton__header {
+	min-height: 2.5rem;
+	align-items: center;
+	border: 1px solid #e5dfd3;
+	border-radius: .55rem;
+	background: rgba(245, 241, 232, .72);
+}
+
+.invitation-skeleton__header span {
+	width: 45%;
+	height: .4rem;
+	margin-inline: .8rem;
+	border-radius: 999px;
+	background: #ded9cf;
+}
+
+.invitation-skeleton__row {
+	min-height: 4.55rem;
+	align-items: center;
+	border: 1px solid #e8e2d7;
+	border-radius: .55rem;
+	background: rgba(255, 254, 250, .82);
+}
+
+.invitation-skeleton__cell {
+	display: grid;
+	gap: .38rem;
+	padding: .75rem .8rem;
+}
+
+.invitation-skeleton__cell i {
+	display: block;
+	width: 72%;
+	height: .55rem;
+	border-radius: 999px;
+	background: #e5e1d8;
+	animation: invitation-skeleton-pulse 1.8s ease-in-out infinite alternate;
+}
+
+.invitation-skeleton__cell--1 i:first-child { width: 78%; height: .72rem; background: #ddd8cc; }
+.invitation-skeleton__cell--1 i:last-child { width: 58%; height: .42rem; }
+.invitation-skeleton__cell--6 i { width: 2.2rem; height: 2.2rem; border-radius: .5rem; }
+.invitation-skeleton__cell--7 i { width: 76%; height: 2.2rem; border-radius: .5rem; }
+
+@keyframes invitation-skeleton-pulse {
+	from { opacity: .62; }
+	to { opacity: 1; }
+}
 
 .invitation-table-shell {
 	position: relative;
@@ -616,6 +751,17 @@
 .invitation-confirmation-dialog > section { margin: 0; border: 0; background: transparent; padding: 1.2rem; }
 
 @media (max-width: 74rem) {
+	.invitation-skeleton__header { display: none; }
+	.invitation-skeleton__visual { gap: .75rem; }
+	.invitation-skeleton__row {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		min-height: 0;
+		padding: .25rem;
+		box-shadow: 0 .55rem 1.6rem rgba(34, 54, 45, .035);
+	}
+	.invitation-skeleton__cell { min-width: 0; padding: .65rem; }
+	.invitation-skeleton__cell--1 { grid-column: 1 / -1; padding-bottom: .8rem; border-bottom: 1px solid #ece7dc; }
+	.invitation-skeleton__cell--7 { grid-column: 1 / -1; }
 	.invitation-table-shell { border: 0; background: transparent; box-shadow: none; }
 	.invitation-table,
 	.invitation-table tbody { display: block; }
@@ -671,6 +817,11 @@
 	.invitation-filter-control { flex: 1 1 auto; }
 	.invitation-filter-control,
 	.invitation-toolbar__filter { width: auto; }
+	.invitation-filter-panel {
+		right: auto;
+		left: 0;
+		width: min(21rem, calc(100vw - (2 * var(--content-padding))));
+	}
 }
 
 @media (max-width: 36rem) {
@@ -679,7 +830,10 @@
 	.invitation-filter-control { width: calc(50% - .35rem); }
 	.invitation-toolbar__filter { width: 100%; }
 	.invitation-toolbar__create { order: 2; }
-	.invitation-filter-panel { right: auto; left: 0; }
+	.invitation-empty__actions { width: 100%; }
+	.invitation-empty__actions > a,
+	.invitation-empty__actions > button { flex: 1 1 100%; }
+	.invitation-skeleton__row { grid-template-columns: 1fr 1fr; }
 	.invitation-table tr { grid-template-columns: 1fr 1fr; }
 	.invitation-table__attendance-cell,
 	.invitation-table__status-cell { grid-column: span 1; }
@@ -698,4 +852,5 @@
 		transition-duration: .01ms !important;
 		scroll-behavior: auto !important;
 	}
+	.invitation-skeleton__cell i { animation: none; opacity: .82; }
 }

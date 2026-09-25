@@ -69,6 +69,10 @@ function mount(items: Invitation[] = [detailed, archived]) {
 	return render(<MemoryRouter><InvitationListPage /></MemoryRouter>);
 }
 
+function renderPage() {
+	return render(<MemoryRouter><InvitationListPage /></MemoryRouter>);
+}
+
 async function ready() {
 	return screen.findByRole('table', { name: 'Listado de invitaciones' });
 }
@@ -165,6 +169,36 @@ describe('listado de invitaciones', () => {
 		expect((screen.getByRole('button', { name: 'Limpiar' }) as HTMLButtonElement).disabled).toBe(false);
 	});
 
+	it('muestra el contador solo para filtros aplicados y no cuenta búsqueda ni drafts', async () => {
+		mount();
+		await ready();
+		const filterButton = screen.getByRole('button', { name: 'Filtros' });
+		expect(filterButton.querySelector('.invitation-toolbar__filter-count')).toBeNull();
+
+		fireEvent.change(screen.getByLabelText('Buscar invitaciones'), { target: { value: 'Rivera' } });
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: 'Rivera' }), { timeout: 1200 });
+		expect(filterButton.querySelector('.invitation-toolbar__filter-count')).toBeNull();
+
+		fireEvent.click(filterButton);
+		fireEvent.change(screen.getByLabelText('Estado RSVP'), { target: { value: 'confirmed' } });
+		expect(filterButton.querySelector('.invitation-toolbar__filter-count')).toBeNull();
+		fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: 'confirmed', search: 'Rivera' }));
+		expect(screen.getByRole('button', { name: 'Filtros, 1 filtro activo' }).querySelector('.invitation-toolbar__filter-count')?.textContent).toBe('1');
+
+		fireEvent.click(screen.getByRole('button', { name: 'Filtros, 1 filtro activo' }));
+		fireEvent.change(screen.getByLabelText('Estado de invitación'), { target: { value: 'false' } });
+		expect(screen.getByRole('button', { name: 'Filtros, 1 filtro activo' }).querySelector('.invitation-toolbar__filter-count')?.textContent).toBe('1');
+		fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: false, rsvpStatus: 'confirmed', search: 'Rivera' }));
+		expect(screen.getByRole('button', { name: 'Filtros, 2 filtros activos' }).querySelector('.invitation-toolbar__filter-count')?.textContent).toBe('2');
+
+		fireEvent.click(screen.getByRole('button', { name: 'Filtros, 2 filtros activos' }));
+		fireEvent.click(screen.getByRole('button', { name: 'Limpiar' }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: 'Rivera' }));
+		expect(screen.getByRole('button', { name: 'Filtros' }).querySelector('.invitation-toolbar__filter-count')).toBeNull();
+	});
+
 	it('descarta drafts con Escape o click fuera y conserva los filtros aplicados al reabrir', async () => {
 		mount();
 		await ready();
@@ -225,6 +259,48 @@ describe('listado de invitaciones', () => {
 		expect(search.placeholder).toBe('Buscar por familia, invitado o código...');
 		fireEvent.change(screen.getByLabelText('Buscar invitaciones'), { target: { value: '  Rivera  ' } });
 		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: 'Rivera' }), { timeout: 1200 });
+	});
+
+	it('muestra un empty state filtrado y permite limpiar filtros sin borrar la búsqueda', async () => {
+		vi.mocked(getInvitations).mockImplementation(async (filters = {}) => {
+			const constrained = Boolean(filters.search || filters.rsvpStatus || filters.archived !== undefined);
+			return constrained ? { items: [], total: 0 } : { items: [detailed], total: 1 };
+		});
+		renderPage();
+		await ready();
+
+		const search = screen.getByLabelText('Buscar invitaciones') as HTMLInputElement;
+		fireEvent.change(search, { target: { value: 'Rivera' } });
+		expect(await screen.findByRole('heading', { name: 'No encontramos invitaciones' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Limpiar búsqueda' })).toBeTruthy();
+
+		fireEvent.click(screen.getByRole('button', { name: 'Filtros' }));
+		fireEvent.change(screen.getByLabelText('Estado RSVP'), { target: { value: 'confirmed' } });
+		fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: 'confirmed', search: 'Rivera' }));
+		fireEvent.click(await screen.findByRole('button', { name: 'Limpiar filtros' }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: 'Rivera' }));
+		expect(search.value).toBe('Rivera');
+		expect(screen.getByRole('heading', { name: 'No encontramos invitaciones' })).toBeTruthy();
+	});
+
+	it('muestra acciones reales cuando la colección está completamente vacía', async () => {
+		mount([]);
+		const heading = await screen.findByRole('heading', { name: 'Aún no hay invitaciones' });
+		const empty = heading.closest('section') as HTMLElement;
+		expect(within(empty).getByText('Crea tu primera invitación o impórtalas desde Excel.')).toBeTruthy();
+		expect(within(empty).getByRole('link', { name: 'Nueva invitación' }).getAttribute('href')).toBe('/invitaciones/nueva');
+		expect(within(empty).getByRole('link', { name: 'Importar Excel' }).getAttribute('href')).toBe('/invitaciones/importar');
+		expect(screen.queryByRole('table')).toBeNull();
+	});
+
+	it('usa un skeleton semántico sin exponer filas o contenido ficticio', () => {
+		vi.mocked(getInvitations).mockReturnValue(new Promise(() => undefined));
+		renderPage();
+		const loading = screen.getByRole('status', { name: 'Cargando invitaciones' });
+		expect(loading.querySelector('.invitation-skeleton__visual')?.getAttribute('aria-hidden')).toBe('true');
+		expect(screen.queryByRole('table')).toBeNull();
+		expect(screen.queryByRole('row')).toBeNull();
 	});
 
 	it('renderiza los cuatro estados RSVP sin redefinirlos', async () => {

@@ -11,6 +11,61 @@ import './InvitationListPage.css';
 const filtersId = 'invitation-list-filters';
 const filtersTitleId = 'invitation-list-filters-title';
 
+function InvitationListSkeleton() {
+	return (
+		<div className="invitation-skeleton" role="status" aria-live="polite" aria-label="Cargando invitaciones">
+			<span className="visually-hidden">Cargando invitaciones...</span>
+			<div className="invitation-skeleton__visual" aria-hidden="true">
+				<div className="invitation-skeleton__header">
+					{Array.from({ length: 7 }, (_, index) => <span key={index} />)}
+				</div>
+				{Array.from({ length: 5 }, (_, row) => (
+					<div className="invitation-skeleton__row" key={row}>
+						{Array.from({ length: 7 }, (_, cell) => (
+							<span className={`invitation-skeleton__cell invitation-skeleton__cell--${cell + 1}`} key={cell}>
+								<i />
+								{cell === 0 && <i />}
+							</span>
+						))}
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
+
+interface InvitationEmptyStateProps {
+	hasSearch: boolean;
+	hasAppliedFilters: boolean;
+	onClearFilters: () => void;
+	onClearSearch: () => void;
+}
+
+function InvitationEmptyState({ hasSearch, hasAppliedFilters, onClearFilters, onClearSearch }: InvitationEmptyStateProps) {
+	const constrained = hasSearch || hasAppliedFilters;
+	return (
+		<section className="invitation-empty" aria-labelledby="invitation-empty-title">
+			<span className="invitation-empty__icon" aria-hidden="true">
+				<svg viewBox="0 0 24 24"><path d="M4 6.5h16v11H4z" /><path d="m4.5 7 7.5 6 7.5-6" /></svg>
+			</span>
+			<div role="status">
+				<h2 id="invitation-empty-title">{constrained ? 'No encontramos invitaciones' : 'Aún no hay invitaciones'}</h2>
+				<p>{constrained ? 'Prueba con otra búsqueda o ajusta los filtros aplicados.' : 'Crea tu primera invitación o impórtalas desde Excel.'}</p>
+			</div>
+			<div className="invitation-empty__actions">
+				{hasAppliedFilters && <Button variant="secondary" type="button" onClick={onClearFilters}>Limpiar filtros</Button>}
+				{hasSearch && <Button variant="secondary" type="button" onClick={onClearSearch}>Limpiar búsqueda</Button>}
+				{!constrained && (
+					<>
+						<ButtonLink variant="primary" to="/invitaciones/nueva">Nueva invitación</ButtonLink>
+						<ButtonLink variant="secondary" to="/invitaciones/importar">Importar Excel</ButtonLink>
+					</>
+				)}
+			</div>
+		</section>
+	);
+}
+
 export function InvitationListPage() {
 	const [response, setResponse] = useState<InvitationListResponse | null>(null);
 	const [search, setSearch] = useState('');
@@ -80,7 +135,7 @@ export function InvitationListPage() {
 	}, [archived, filtersOpen, rsvpStatus]);
 
 	const hasAppliedFilters = rsvpStatus !== '' || archived !== undefined;
-	const hasActiveFilters = search.trim() !== '' || hasAppliedFilters;
+	const appliedFilterCount = Number(rsvpStatus !== '') + Number(archived !== undefined);
 	const hasDraftChanges = draftRsvpStatus !== rsvpStatus || draftArchived !== archived;
 
 	const toggleFilters = () => {
@@ -109,6 +164,11 @@ export function InvitationListPage() {
 		setDraftRsvpStatus('');
 		setDraftArchived(undefined);
 		setFiltersOpen(false);
+	};
+
+	const clearSearch = () => {
+		setSearch('');
+		setDebouncedSearch('');
 	};
 
 	const updateInvitation = (updated: Invitation) => {
@@ -155,12 +215,14 @@ export function InvitationListPage() {
 						className={`invitation-toolbar__filter${hasAppliedFilters ? ' invitation-toolbar__filter--active' : ''}`}
 						variant="secondary"
 						type="button"
+						aria-label={appliedFilterCount === 0 ? 'Filtros' : `Filtros, ${appliedFilterCount} ${appliedFilterCount === 1 ? 'filtro activo' : 'filtros activos'}`}
 						aria-expanded={filtersOpen}
 						aria-controls={filtersId}
 						onClick={toggleFilters}
 					>
 						<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h16l-6.2 7.1v5.4l-3.6 1.8v-7.2L4 5Z" /></svg>
-						Filtros
+						<span>Filtros</span>
+						{appliedFilterCount > 0 && <span className="invitation-toolbar__filter-count" aria-hidden="true">{appliedFilterCount}</span>}
 					</Button>
 					<div
 						id={filtersId}
@@ -195,12 +257,15 @@ export function InvitationListPage() {
 				</ButtonLink>
 			</div>
 
-			{loading && <p role="status" className="invitation-list-state">Cargando invitaciones...</p>}
+			{loading && <InvitationListSkeleton />}
 			{!loading && (error || !response) && <p role="alert" className="invitation-list-state invitation-list-state--error">No fue posible cargar las invitaciones.</p>}
 			{!loading && !error && response?.items.length === 0 && (
-				<p className="invitation-list-state">
-					{hasActiveFilters ? 'No se encontraron invitaciones con estos filtros.' : 'No hay invitaciones.'}
-				</p>
+				<InvitationEmptyState
+					hasSearch={search.trim() !== ''}
+					hasAppliedFilters={hasAppliedFilters}
+					onClearFilters={clearFilters}
+					onClearSearch={clearSearch}
+				/>
 			)}
 			{!loading && !error && response && response.items.length > 0 && (
 				<InvitationList
