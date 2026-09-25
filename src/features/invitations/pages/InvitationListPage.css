@@ -265,7 +265,11 @@
 }
 
 .invitation-list-summary {
+	display: flex;
 	min-height: 3rem;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
 	padding: 1.1rem .15rem 0;
 }
 
@@ -286,6 +290,56 @@
 	background: var(--color-admin-gold);
 	content: "";
 	vertical-align: .08rem;
+}
+
+.invitation-pagination,
+.invitation-pagination__pages {
+	display: flex;
+	align-items: center;
+	gap: .35rem;
+}
+
+.invitation-pagination button {
+	min-width: 2.35rem;
+	min-height: 2.35rem;
+	border: 1px solid #cdd6d1;
+	border-radius: .5rem;
+	background: rgba(255, 254, 250, .82);
+	padding: .45rem .7rem;
+	color: var(--color-admin-green-700);
+	font-size: .78rem;
+	font-weight: 700;
+	cursor: pointer;
+	transition: border-color .18s ease, background-color .18s ease, color .18s ease, transform .18s ease;
+}
+
+.invitation-pagination button:hover:not(:disabled) {
+	border-color: #92a69c;
+	background: var(--color-admin-green-100);
+	transform: translateY(-1px);
+}
+
+.invitation-pagination button[aria-current="page"] {
+	border-color: var(--color-admin-green-900);
+	background: var(--color-admin-green-900);
+	color: #fff;
+}
+
+.invitation-pagination button:disabled {
+	color: #a2aaa6;
+	cursor: not-allowed;
+	opacity: .62;
+}
+
+.invitation-pagination button:focus-visible {
+	outline: 3px solid rgba(169, 132, 69, .22);
+	outline-offset: 2px;
+}
+
+.invitation-pagination__pages span {
+	min-width: 1.25rem;
+	color: var(--color-admin-muted);
+	text-align: center;
 }
 
 .invitation-list-state {
@@ -822,6 +876,8 @@
 		left: 0;
 		width: min(21rem, calc(100vw - (2 * var(--content-padding))));
 	}
+	.invitation-list-summary { align-items: flex-start; flex-direction: column; }
+	.invitation-pagination { width: 100%; justify-content: space-between; }
 }
 
 @media (max-width: 36rem) {
@@ -841,6 +897,9 @@
 	.invitation-actions { justify-content: space-between; }
 	.invitation-actions__detail { flex: 1; justify-content: center; }
 	.invitation-actions__menu { right: 0; left: auto; }
+	.invitation-pagination { flex-wrap: wrap; }
+	.invitation-pagination > button { flex: 1 1 auto; }
+	.invitation-pagination__pages { order: -1; width: 100%; justify-content: center; }
 }
 
 @media (prefers-reduced-motion: reduce) {

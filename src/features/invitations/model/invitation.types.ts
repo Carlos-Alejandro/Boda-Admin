@@ -18,6 +18,8 @@ export interface InvitationFilters {
 	search?: string;
 	rsvpStatus?: RsvpStatus;
 	archived?: boolean;
+	page?: number;
+	pageSize?: number;
 }
 
 export interface CreateInvitationInput {
@@ -54,4 +56,7 @@ export interface ChangeInvitationCapacityInput {
 export interface InvitationListResponse {
 	items: Invitation[];
 	total: number;
+	page?: number;
+	pageSize?: number;
+	totalPages?: number;
 }

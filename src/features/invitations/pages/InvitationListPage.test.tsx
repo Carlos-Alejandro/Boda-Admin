@@ -160,7 +160,7 @@ describe('listado de invitaciones', () => {
 		fireEvent.click(applyButton);
 		expect(screen.getByRole('button', { name: /Filtros/ }).getAttribute('aria-expanded')).toBe('false');
 		expect(screen.queryByRole('dialog', { name: 'Filtrar invitaciones' })).toBeNull();
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: false, rsvpStatus: 'confirmed', search: undefined }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: false, rsvpStatus: 'confirmed', search: undefined, page: 1, pageSize: 15 }));
 
 		fireEvent.click(screen.getByRole('button', { name: /Filtros/ }));
 		expect((screen.getByLabelText('Estado RSVP') as HTMLSelectElement).value).toBe('confirmed');
@@ -176,26 +176,26 @@ describe('listado de invitaciones', () => {
 		expect(filterButton.querySelector('.invitation-toolbar__filter-count')).toBeNull();
 
 		fireEvent.change(screen.getByLabelText('Buscar invitaciones'), { target: { value: 'Rivera' } });
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: 'Rivera' }), { timeout: 1200 });
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: 'Rivera', page: 1, pageSize: 15 }), { timeout: 1200 });
 		expect(filterButton.querySelector('.invitation-toolbar__filter-count')).toBeNull();
 
 		fireEvent.click(filterButton);
 		fireEvent.change(screen.getByLabelText('Estado RSVP'), { target: { value: 'confirmed' } });
 		expect(filterButton.querySelector('.invitation-toolbar__filter-count')).toBeNull();
 		fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: 'confirmed', search: 'Rivera' }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: 'confirmed', search: 'Rivera', page: 1, pageSize: 15 }));
 		expect(screen.getByRole('button', { name: 'Filtros, 1 filtro activo' }).querySelector('.invitation-toolbar__filter-count')?.textContent).toBe('1');
 
 		fireEvent.click(screen.getByRole('button', { name: 'Filtros, 1 filtro activo' }));
 		fireEvent.change(screen.getByLabelText('Estado de invitación'), { target: { value: 'false' } });
 		expect(screen.getByRole('button', { name: 'Filtros, 1 filtro activo' }).querySelector('.invitation-toolbar__filter-count')?.textContent).toBe('1');
 		fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: false, rsvpStatus: 'confirmed', search: 'Rivera' }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: false, rsvpStatus: 'confirmed', search: 'Rivera', page: 1, pageSize: 15 }));
 		expect(screen.getByRole('button', { name: 'Filtros, 2 filtros activos' }).querySelector('.invitation-toolbar__filter-count')?.textContent).toBe('2');
 
 		fireEvent.click(screen.getByRole('button', { name: 'Filtros, 2 filtros activos' }));
 		fireEvent.click(screen.getByRole('button', { name: 'Limpiar' }));
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: 'Rivera' }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: 'Rivera', page: 1, pageSize: 15 }));
 		expect(screen.getByRole('button', { name: 'Filtros' }).querySelector('.invitation-toolbar__filter-count')).toBeNull();
 	});
 
@@ -207,7 +207,7 @@ describe('listado de invitaciones', () => {
 		fireEvent.change(screen.getByLabelText('Estado RSVP'), { target: { value: 'confirmed' } });
 		fireEvent.change(screen.getByLabelText('Estado de invitación'), { target: { value: 'false' } });
 		fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: false, rsvpStatus: 'confirmed', search: undefined }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: false, rsvpStatus: 'confirmed', search: undefined, page: 1, pageSize: 15 }));
 		const callsAfterApply = vi.mocked(getInvitations).mock.calls.length;
 
 		fireEvent.click(filterButton);
@@ -235,7 +235,7 @@ describe('listado de invitaciones', () => {
 		fireEvent.change(screen.getByLabelText('Estado RSVP'), { target: { value: 'partial' } });
 		fireEvent.change(screen.getByLabelText('Estado de invitación'), { target: { value: 'true' } });
 		fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: true, rsvpStatus: 'partial', search: undefined }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: true, rsvpStatus: 'partial', search: undefined, page: 1, pageSize: 15 }));
 
 		fireEvent.click(filterButton);
 		const clearButton = screen.getByRole('button', { name: 'Limpiar' }) as HTMLButtonElement;
@@ -243,7 +243,7 @@ describe('listado de invitaciones', () => {
 		fireEvent.click(clearButton);
 		expect(filterButton.getAttribute('aria-expanded')).toBe('false');
 		expect(screen.queryByRole('dialog', { name: 'Filtrar invitaciones' })).toBeNull();
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: undefined }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: undefined, page: 1, pageSize: 15 }));
 
 		fireEvent.click(filterButton);
 		expect((screen.getByLabelText('Estado RSVP') as HTMLSelectElement).value).toBe('');
@@ -258,7 +258,7 @@ describe('listado de invitaciones', () => {
 		const search = screen.getByLabelText('Buscar invitaciones') as HTMLInputElement;
 		expect(search.placeholder).toBe('Buscar por familia, invitado o código...');
 		fireEvent.change(screen.getByLabelText('Buscar invitaciones'), { target: { value: '  Rivera  ' } });
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: 'Rivera' }), { timeout: 1200 });
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: 'Rivera', page: 1, pageSize: 15 }), { timeout: 1200 });
 	});
 
 	it('muestra un empty state filtrado y permite limpiar filtros sin borrar la búsqueda', async () => {
@@ -277,9 +277,9 @@ describe('listado de invitaciones', () => {
 		fireEvent.click(screen.getByRole('button', { name: 'Filtros' }));
 		fireEvent.change(screen.getByLabelText('Estado RSVP'), { target: { value: 'confirmed' } });
 		fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: 'confirmed', search: 'Rivera' }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: 'confirmed', search: 'Rivera', page: 1, pageSize: 15 }));
 		fireEvent.click(await screen.findByRole('button', { name: 'Limpiar filtros' }));
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: 'Rivera' }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: 'Rivera', page: 1, pageSize: 15 }));
 		expect(search.value).toBe('Rivera');
 		expect(screen.getByRole('heading', { name: 'No encontramos invitaciones' })).toBeTruthy();
 	});
@@ -389,6 +389,8 @@ describe('listado de invitaciones', () => {
 			description: 'La invitación dejó de estar disponible para el invitado.',
 		});
 
+		await ready();
+		await waitFor(() => expect(screen.getByRole('button', { name: 'Más acciones para Familia ARCH-2' })).toBeTruthy());
 		fireEvent.click(screen.getByRole('button', { name: 'Más acciones para Familia ARCH-2' }));
 		fireEvent.click(screen.getByRole('menuitem', { name: 'Restaurar' }));
 		expect(restoreInvitation).not.toHaveBeenCalled();
@@ -421,5 +423,62 @@ describe('listado de invitaciones', () => {
 		await waitFor(() => expect(notify.error).toHaveBeenCalledWith('No se pudo restaurar la invitación', {
 			description: 'Revisa el estado de la invitación e inténtalo nuevamente.',
 		}));
+	});
+
+	it('pagina 15/16 resultados con resumen, estados disabled y aria-current', async () => {
+		const firstPage = Array.from({ length: 15 }, (_, index) => invitation(`P1-${index + 1}`));
+		const last = invitation('P2-16');
+		vi.mocked(getInvitations).mockImplementation(async (filters = {}) => filters.page === 2
+			? { items: [last], total: 16, page: 2, pageSize: 15, totalPages: 2 }
+			: { items: firstPage, total: 16, page: 1, pageSize: 15, totalPages: 2 });
+		renderPage();
+		await ready();
+		expect(screen.getByText('Mostrando 1–15 de 16 invitaciones')).toBeTruthy();
+		expect((screen.getByRole('button', { name: 'Anterior' }) as HTMLButtonElement).disabled).toBe(true);
+		expect(screen.getByRole('button', { name: 'Ir a la página 1' }).getAttribute('aria-current')).toBe('page');
+
+		fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+		expect(await screen.findByText('Familia P2-16')).toBeTruthy();
+		expect(screen.getByText('Mostrando 16–16 de 16 invitaciones')).toBeTruthy();
+		expect((screen.getByRole('button', { name: 'Siguiente' }) as HTMLButtonElement).disabled).toBe(true);
+		expect(screen.getByRole('button', { name: 'Ir a la página 2' }).getAttribute('aria-current')).toBe('page');
+	});
+
+	it('vuelve a página 1 al buscar o aplicar filtros', async () => {
+		vi.mocked(getInvitations).mockResolvedValue({ items: [detailed], total: 30, page: 1, pageSize: 15, totalPages: 2 });
+		renderPage();
+		await ready();
+		fireEvent.click(screen.getByRole('button', { name: 'Ir a la página 2' }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 })));
+		fireEvent.change(screen.getByLabelText('Buscar invitaciones'), { target: { value: 'Carlos' } });
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, search: 'Carlos' })), { timeout: 1200 });
+
+		fireEvent.click(screen.getByRole('button', { name: /Filtros/ }));
+		fireEvent.change(screen.getByLabelText('Estado RSVP'), { target: { value: 'confirmed' } });
+		fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, rsvpStatus: 'confirmed' })));
+	});
+
+	it('acepta la página corregida por API después de archivar el único resultado final', async () => {
+		let archivedCurrent = false;
+		const only = invitation('ONLY-P2');
+		vi.mocked(getInvitations).mockImplementation(async (filters = {}) => {
+			if (filters.page === 2 && !archivedCurrent) return { items: [only], total: 16, page: 2, pageSize: 15, totalPages: 2 };
+			if (!archivedCurrent) return { items: [detailed], total: 16, page: 1, pageSize: 15, totalPages: 2 };
+			return { items: [detailed], total: 15, page: 1, pageSize: 15, totalPages: 1 };
+		});
+		vi.mocked(archiveInvitation).mockImplementation(async () => {
+			archivedCurrent = true;
+			return { ...only, isArchived: true, archivedAt: '2026-09-25T12:00:00.000Z' };
+		});
+		renderPage();
+		await ready();
+		fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+		expect(await screen.findByText('Familia ONLY-P2')).toBeTruthy();
+		fireEvent.click(screen.getByRole('button', { name: 'Más acciones para Familia ONLY-P2' }));
+		fireEvent.click(screen.getByRole('menuitem', { name: 'Archivar' }));
+		fireEvent.click(screen.getByRole('button', { name: 'Confirmar archivo' }));
+		expect(await screen.findByText('Mostrando 1–15 de 15 invitaciones')).toBeTruthy();
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 })));
 	});
 });

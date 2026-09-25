@@ -10,6 +10,22 @@ import './InvitationListPage.css';
 
 const filtersId = 'invitation-list-filters';
 const filtersTitleId = 'invitation-list-filters-title';
+const pageSize = 15;
+
+function paginationItems(current: number, total: number): Array<number | 'ellipsis-start' | 'ellipsis-end'> {
+	if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
+	const pages = new Set([1, total, current - 1, current, current + 1]);
+	const visible = [...pages].filter((page) => page >= 1 && page <= total).sort((a, b) => a - b);
+	const result: Array<number | 'ellipsis-start' | 'ellipsis-end'> = [];
+	visible.forEach((page, index) => {
+		const previous = visible[index - 1];
+		if (previous !== undefined && page - previous > 1) {
+			result.push(previous === 1 ? 'ellipsis-start' : 'ellipsis-end');
+		}
+		result.push(page);
+	});
+	return result;
+}
 
 function InvitationListSkeleton() {
 	return (
@@ -72,6 +88,7 @@ export function InvitationListPage() {
 	const [debouncedSearch, setDebouncedSearch] = useState('');
 	const [rsvpStatus, setRsvpStatus] = useState<RsvpStatus | ''>('');
 	const [archived, setArchived] = useState<boolean | undefined>();
+	const [page, setPage] = useState(1);
 	const [draftRsvpStatus, setDraftRsvpStatus] = useState<RsvpStatus | ''>('');
 	const [draftArchived, setDraftArchived] = useState<boolean | undefined>();
 	const [filtersOpen, setFiltersOpen] = useState(false);
@@ -82,7 +99,10 @@ export function InvitationListPage() {
 	const filterControl = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
-		const timeout = window.setTimeout(() => setDebouncedSearch(search.trim()), 400);
+		const timeout = window.setTimeout(() => {
+			setDebouncedSearch(search.trim());
+			setPage(1);
+		}, 400);
 		return () => window.clearTimeout(timeout);
 	}, [search]);
 
@@ -97,8 +117,13 @@ export function InvitationListPage() {
 					search: debouncedSearch || undefined,
 					rsvpStatus: rsvpStatus || undefined,
 					archived,
+					page,
+					pageSize,
 				});
-				if (requestId === requestSequence.current) setResponse(invitationList);
+				if (requestId === requestSequence.current) {
+					setResponse(invitationList);
+					if (invitationList.page !== undefined && invitationList.page !== page) setPage(invitationList.page);
+				}
 			} catch {
 				if (requestId === requestSequence.current) setError(true);
 			} finally {
@@ -108,7 +133,7 @@ export function InvitationListPage() {
 
 		void loadInvitations();
 		return () => { requestSequence.current += 1; };
-	}, [archived, debouncedSearch, refreshToken, rsvpStatus]);
+	}, [archived, debouncedSearch, page, refreshToken, rsvpStatus]);
 
 	useEffect(() => {
 		if (!filtersOpen) return;
@@ -154,6 +179,7 @@ export function InvitationListPage() {
 		if (!hasDraftChanges) return;
 		setRsvpStatus(draftRsvpStatus);
 		setArchived(draftArchived);
+		setPage(1);
 		setFiltersOpen(false);
 	};
 
@@ -163,12 +189,14 @@ export function InvitationListPage() {
 		setArchived(undefined);
 		setDraftRsvpStatus('');
 		setDraftArchived(undefined);
+		setPage(1);
 		setFiltersOpen(false);
 	};
 
 	const clearSearch = () => {
 		setSearch('');
 		setDebouncedSearch('');
+		setPage(1);
 	};
 
 	const updateInvitation = (updated: Invitation) => {
@@ -187,7 +215,12 @@ export function InvitationListPage() {
 				items: current.items.map((item) => item.id === updated.id ? updated : item),
 			};
 		});
+		setRefreshToken((token) => token + 1);
 	};
+
+	const responsePage = response?.page ?? page;
+	const responsePageSize = response?.pageSize ?? pageSize;
+	const responseTotalPages = response?.totalPages ?? (response ? Math.ceil(response.total / responsePageSize) : 0);
 
 	return (
 		<section className="invitation-list-page" aria-labelledby="invitations-title">
@@ -276,7 +309,24 @@ export function InvitationListPage() {
 			)}
 			<div className="invitation-list-summary" aria-live="polite">
 				{response && !loading && response.total > 0 && (
-					<p>Mostrando {response.items.length} de {response.total} {response.total === 1 ? 'invitación' : 'invitaciones'}</p>
+					<>
+						<p>Mostrando {(responsePage - 1) * responsePageSize + 1}–{Math.min(responsePage * responsePageSize, response.total)} de {response.total} {response.total === 1 ? 'invitación' : 'invitaciones'}</p>
+						<nav className="invitation-pagination" aria-label="Paginación de invitaciones">
+							<button type="button" disabled={responsePage === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Anterior</button>
+							<div className="invitation-pagination__pages">
+								{paginationItems(responsePage, responseTotalPages).map((item) => typeof item === 'number' ? (
+									<button
+										key={item}
+										type="button"
+										aria-label={`Ir a la página ${item}`}
+										aria-current={item === responsePage ? 'page' : undefined}
+										onClick={() => setPage(item)}
+									>{item}</button>
+								) : <span key={item} aria-hidden="true">…</span>)}
+							</div>
+							<button type="button" disabled={responsePage >= responseTotalPages} onClick={() => setPage((current) => Math.min(responseTotalPages, current + 1))}>Siguiente</button>
+						</nav>
+					</>
 				)}
 			</div>
 		</section>

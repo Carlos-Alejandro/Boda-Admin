@@ -17,6 +17,8 @@ export function getInvitations(filters: InvitationFilters = {}) {
 	if (filters.archived !== undefined) {
 		query.set('archived', String(filters.archived));
 	}
+	if (filters.page !== undefined) query.set('page', String(filters.page));
+	if (filters.pageSize !== undefined) query.set('pageSize', String(filters.pageSize));
 
 	const queryString = query.toString();
 	const path = `/api/admin/invitations${queryString ? `?${queryString}` : ''}`;

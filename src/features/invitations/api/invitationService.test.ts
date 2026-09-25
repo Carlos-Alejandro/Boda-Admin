@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { createInvitation } from './invitationService';
+import { createInvitation, getInvitations } from './invitationService';
 import { ApiError } from '../../../services/http/apiClient';
 import { executeImport, type ImportItem } from '../import/model/importExecution';
 const { getIdToken } = vi.hoisted(() => {
@@ -48,6 +48,12 @@ it('no envía una petición abortada mientras esperaba el token', async () => {
   const request = createInvitation(payload, { signal: controller.signal, idempotencyKey: 'key' });
   controller.abort(); resolve('test-token');
   await expect(request).rejects.toThrow(); expect(fetch).not.toHaveBeenCalled();
+});
+
+it('serializa búsqueda, filtros y paginación real en GET', async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ items: [], total: 0, page: 1, pageSize: 15, totalPages: 0 }), { status: 200 }));
+  await getInvitations({ search: '  América  ', rsvpStatus: 'partial', archived: false, page: 2, pageSize: 15 });
+  expect(vi.mocked(fetch).mock.calls[0][0]).toBe('https://api.test/api/admin/invitations?search=Am%C3%A9rica&rsvpStatus=partial&archived=false&page=2&pageSize=15');
 });
 
 it.each([200, 201, 202, 206])('HTTP %s solo confirma creación si es 200/201, conservando orden y autenticación', async status => {
