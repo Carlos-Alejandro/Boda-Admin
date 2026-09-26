@@ -583,6 +583,19 @@
 	line-height: 1.35;
 }
 
+.invitation-table__guest-match {
+	display: block;
+	color: #718078;
+	font-size: .7rem;
+}
+
+.invitation-table__guest-match mark {
+	border-radius: .16rem;
+	background: rgba(169, 132, 69, .13);
+	color: #66512d;
+	padding: 0 .08em;
+}
+
 .invitation-table code {
 	color: #465b51;
 	font-family: var(--font-admin-sans);

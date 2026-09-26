@@ -9,12 +9,59 @@ import { getPublicInvitationUrl } from '../model/publicInvitationUrl';
 
 interface InvitationListProps {
 	items: Invitation[];
+	search: string;
 	onInvitationChanged: (invitation: Invitation) => void;
 	onReloadRequested: () => void;
 }
 
 function hasName(guest: Guest) {
 	return guest.name.trim() !== '';
+}
+
+function normalizeSearch(value: string) {
+	let normalized = '';
+	for (const character of value.normalize('NFD')) {
+		if (/\p{Mark}/u.test(character)) continue;
+		normalized += /\s/u.test(character) ? ' ' : character.toLocaleLowerCase('es-MX');
+	}
+	return normalized.trim().replace(/\s+/g, ' ');
+}
+
+interface HighlightedName {
+	name: string;
+	matchStart: number;
+	matchEnd: number;
+}
+
+function matchedGuestNames(invitation: Invitation, search: string): HighlightedName[] {
+	const normalizedSearch = normalizeSearch(search);
+	if (!normalizedSearch) return [];
+	return invitation.guests.filter(hasName).flatMap((guest) => {
+		let normalizedName = '';
+		const sourceIndexes: number[] = [];
+		let previousWasSpace = false;
+		for (const [sourceIndex, character] of Array.from(guest.name).entries()) {
+			const baseCharacter = character.normalize('NFD').replace(/\p{Mark}/gu, '');
+			if (!baseCharacter) continue;
+			const isSpace = /\s/u.test(character);
+			if (isSpace && (previousWasSpace || normalizedName.length === 0)) continue;
+			normalizedName += isSpace ? ' ' : baseCharacter.toLocaleLowerCase('es-MX');
+			sourceIndexes.push(sourceIndex);
+			previousWasSpace = isSpace;
+		}
+		normalizedName = normalizedName.trim();
+		const matchStart = normalizedName.indexOf(normalizedSearch);
+		if (matchStart < 0) return [];
+		const matchEnd = matchStart + normalizedSearch.length;
+		const sourceStart = sourceIndexes[matchStart];
+		const sourceEnd = sourceIndexes[matchEnd - 1];
+		if (sourceStart === undefined || sourceEnd === undefined) return [];
+		return [{ name: guest.name, matchStart: sourceStart, matchEnd: sourceEnd + 1 }];
+	});
+}
+
+function MatchedGuestName({ match }: { match: HighlightedName }) {
+	return <span>{match.name.slice(0, match.matchStart)}<mark>{match.name.slice(match.matchStart, match.matchEnd)}</mark>{match.name.slice(match.matchEnd)}</span>;
 }
 
 function initials(displayName: string) {
@@ -196,7 +243,7 @@ function InvitationActions({ invitation, open, onToggle, onClose, onInvitationCh
 	);
 }
 
-export function InvitationList({ items, onInvitationChanged, onReloadRequested }: InvitationListProps) {
+export function InvitationList({ items, search, onInvitationChanged, onReloadRequested }: InvitationListProps) {
 	const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
 	return (
@@ -217,6 +264,7 @@ export function InvitationList({ items, onInvitationChanged, onReloadRequested }
 				<tbody>
 					{items.map((invitation) => {
 						const identified = invitation.guests.filter(hasName);
+						const matchingGuests = matchedGuestNames(invitation, search);
 						const attending = identified.filter((guest) => guest.attending === true).length;
 						const declining = identified.filter((guest) => guest.attending === false).length;
 						const updateLabel = updatedAtLabel(invitation.updatedAt);
@@ -233,6 +281,13 @@ export function InvitationList({ items, onInvitationChanged, onReloadRequested }
 										<span className={`invitation-table__avatar invitation-table__avatar--${invitation.rsvpStatus}`} aria-hidden="true">{initials(invitation.displayName)}</span>
 										<span className="invitation-table__identity-copy">
 											<strong>{invitation.displayName}</strong>
+											{matchingGuests.length > 0 && (
+												<small className="invitation-table__guest-match" aria-label={`Coincidencia: ${matchingGuests.map(({ name }) => name).join(', ')}`}>
+													<span aria-hidden="true">{matchingGuests.length === 1 ? 'Coincidencia: ' : 'Coincidencias: '}</span>
+													{matchingGuests.slice(0, 2).map((match) => <MatchedGuestName key={`${match.name}-${match.matchStart}`} match={match} />)}
+													{matchingGuests.length > 2 && <span aria-hidden="true"> +{matchingGuests.length - 2} más</span>}
+												</small>
+											)}
 											{updateLabel && <small>Última actualización: {updateLabel}</small>}
 										</span>
 									</div>

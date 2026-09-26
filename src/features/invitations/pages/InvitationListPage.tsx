@@ -303,6 +303,7 @@ export function InvitationListPage() {
 			{!loading && !error && response && response.items.length > 0 && (
 				<InvitationList
 					items={response.items}
+					search={debouncedSearch}
 					onInvitationChanged={updateInvitation}
 					onReloadRequested={() => setRefreshToken((token) => token + 1)}
 				/>

@@ -80,6 +80,21 @@ async function ready() {
 describe('listado de invitaciones', () => {
 	const writeText = vi.fn<(_: string) => Promise<void>>();
 
+	it('explica y resalta coincidencias por nombre de invitado, también con acentos', async () => {
+		mount();
+		await ready();
+		expect(screen.queryByText(/Coincidencia/)).toBeNull();
+
+		fireEvent.change(screen.getByLabelText('Buscar invitaciones'), { target: { value: 'MARIA' } });
+		await waitFor(() => expect(screen.getByLabelText('Coincidencia: María Nueva')).toBeTruthy(), { timeout: 1200 });
+		const match = screen.getByLabelText('Coincidencia: María Nueva');
+		expect(match.querySelector('mark')?.textContent).toBe('María');
+		expect(screen.getByText('Coincidencia:').closest('small')).toBe(match);
+
+		fireEvent.change(screen.getByLabelText('Buscar invitaciones'), { target: { value: 'Familia Rivera' } });
+		await waitFor(() => expect(screen.queryByText(/Coincidencia/)).toBeNull(), { timeout: 1200 });
+	});
+
 	beforeEach(() => {
 		vi.clearAllMocks();
 		writeText.mockResolvedValue(undefined);
