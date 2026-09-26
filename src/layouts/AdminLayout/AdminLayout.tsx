@@ -5,7 +5,7 @@ import { AdminSidebar } from '../../shared/components/AdminSidebar/AdminSidebar'
 
 export function AdminLayout() {
 	return (
-		<div className="grid min-h-screen grid-cols-[15rem_minmax(0,1fr)] max-[64rem]:grid-cols-[13rem_minmax(0,1fr)] max-md:grid-cols-1">
+		<div className="grid min-h-screen grid-cols-[15.625rem_minmax(0,1fr)] max-[64rem]:grid-cols-[13rem_minmax(0,1fr)] max-md:grid-cols-1">
 			<AdminSidebar />
 			<div className="min-w-0">
 				<AdminHeader />
