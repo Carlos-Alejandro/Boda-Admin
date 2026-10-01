@@ -11,7 +11,7 @@ export function ImportSessionPanel({ session, recovered, busy, storageBlocked, o
   const blocked = session.items.some(item => item.status === 'failed' && !retryableFailure(item));
   const created = confirmDiscard?.items.filter(item => item.status === 'created').length ?? 0;
   const uncertain = confirmDiscard?.items.filter(hasUnconfirmedCreation).length ?? 0;
-  return <section aria-label="Sesión local de importación" className="mt-4 space-y-3 rounded-xl border border-admin-border bg-surface p-4">
+  return <section aria-label="Sesión local de importación" className="import-page__session mt-4 space-y-3 rounded-xl border border-admin-border bg-surface p-4">
     {recovered && <p role="status">Sesión recuperada del almacenamiento local de este navegador. La recuperación no inicia envíos automáticos.</p>}
     <h2 className="font-bold">{session.status === 'completed' ? storageBlocked ? 'Resultados pendientes de guardar' : 'Resultados conservados en este navegador' : 'Hay una importación pendiente'}</h2>
     <p className="break-words">Archivo: {session.filename} · {session.items.length} invitaciones</p>

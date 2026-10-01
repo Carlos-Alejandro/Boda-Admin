@@ -56,20 +56,30 @@ describe('vista previa y creación confirmada', () => {
   it('habilita importar con preview válido sin enviar datos antes de confirmar', async () => {
     const storage = vi.spyOn(Storage.prototype, 'setItem');
     await mount();
-    expect(screen.getByText('Selecciona un archivo para comenzar.')).toBeTruthy();
     select();
     expect(screen.getByText('Leyendo y validando todo el archivo…')).toBeTruthy();
     await act(async () => { await Promise.resolve(); });
     expect(FakeWorker.instances[0].postMessage).toHaveBeenCalledOnce();
     act(() => FakeWorker.instances[0].reply({ ok: true, analysis: analysis() }));
     expect(screen.getByText('Familia de prueba')).toBeTruthy();
-    const button = screen.getByRole('button', { name: 'Importar invitaciones' }) as HTMLButtonElement;
+    const button = screen.getByRole('button', { name: 'Continuar' }) as HTMLButtonElement;
     expect(button.disabled).toBe(false);
     fireEvent.click(button);
     expect(fetch).not.toHaveBeenCalled();
     expect(createInvitation).not.toHaveBeenCalled();
     expect(storage).not.toHaveBeenCalled();
     storage.mockRestore();
+  });
+  it('arrastra el XLSX al mismo flujo de lectura y actualiza el paso activo', async () => {
+    await mount();
+    const file = new File(['test'], 'arrastrado.xlsx');
+    Object.defineProperty(file, 'arrayBuffer', { value: () => Promise.resolve(new ArrayBuffer(4)) });
+    const dropZone = screen.getByText('Arrastra y suelta tu archivo XLSX aquí').parentElement!;
+    expect(screen.getByText('Seleccionar archivo', { selector: 'li span:last-child' }).parentElement?.getAttribute('aria-current')).toBe('step');
+    fireEvent.drop(dropZone, { dataTransfer: { files: [file] } });
+    await waitFor(() => expect(FakeWorker.instances[0].postMessage).toHaveBeenCalledOnce());
+    act(() => FakeWorker.instances[0].reply({ ok: true, analysis: analysis() }));
+    expect(screen.getByText('Revisar datos').parentElement?.getAttribute('aria-current')).toBe('step');
   });
   it('reemplaza errores y vista previa al seleccionar otro archivo y descarta resultados atrasados', async () => {
     await mount(); select('primero.xlsx');
@@ -137,14 +147,14 @@ describe('vista previa y creación confirmada', () => {
     value.valid = false; value.summary.errors = 1;
     value.issues.push({ severity: 'error', sheet: 'Extra', row: 0, column: '', code: 'EXTRA', message: 'Hoja extra' });
     await ready(value);
-    expect((screen.getByRole('button', { name: 'Importar invitaciones' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Continuar' }) as HTMLButtonElement).disabled).toBe(true);
     expect(createInvitation).not.toHaveBeenCalled();
   });
   it('advertencias permiten confirmar, muestra cantidades y cancelar no llama API', async () => {
     await mount(); const value = analysis();
     value.issues.push({ severity: 'warning', sheet: 'Invitaciones', row: 2, column: '', code: 'REPEATED', message: 'Nombre repetido' });
     await ready(value);
-    fireEvent.click(screen.getByRole('button', { name: 'Importar invitaciones' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     expect(screen.getByText('Se crearán 1 invitaciones con 2 cupos en total.')).toBeTruthy();
     expect(document.activeElement).toBe(screen.getByRole('region', { name: 'Confirmar importación' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
@@ -155,7 +165,7 @@ describe('vista previa y creación confirmada', () => {
     let resolve!: (value: Invitation) => void;
     vi.mocked(createInvitation).mockImplementation(() => new Promise(done => { resolve = done; }));
     const view = await mount(); await ready();
-    const start = screen.getByRole('button', { name: 'Importar invitaciones' });
+    const start = screen.getByRole('button', { name: 'Continuar' });
     fireEvent.click(start); fireEvent.click(start);
     const confirm = screen.getByRole('button', { name: 'Crear invitaciones' });
     act(() => { fireEvent.click(confirm); fireEvent.click(confirm); });
@@ -211,7 +221,7 @@ describe('vista previa y creación confirmada', () => {
     value.invitations = [2, 3, 4].map(row => ({ ...value.invitations[0], row }));
     vi.mocked(createInvitation).mockResolvedValueOnce({ id: 'real', version: 'v1' } as Invitation).mockRejectedValue(new ApiError(status));
     await mount(); await ready(value);
-    fireEvent.click(screen.getByRole('button', { name: 'Importar invitaciones' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Crear invitaciones' })); });
     await screen.findByText('Importación detenida');
     expect(screen.getByText(status === 400 ? '1 creadas · 1 fallidas · 1 no procesadas · 0 desconocidas' : '1 creadas · 0 fallidas · 1 no procesadas · 1 desconocidas')).toBeTruthy();
@@ -236,7 +246,7 @@ describe('vista previa y creación confirmada', () => {
     vi.mocked(createInvitation).mockImplementation(() => new Promise(done => { resolve = done; }));
     const value = analysis(); value.invitations.push({ ...value.invitations[0], row: 3 });
     const view = await mount(); await ready(value);
-    fireEvent.click(screen.getByRole('button', { name: 'Importar invitaciones' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Crear invitaciones' }));
     await waitFor(() => expect(createInvitation).toHaveBeenCalledTimes(1));
     view.unmount();
@@ -304,7 +314,7 @@ describe('vista previa y creación confirmada', () => {
     const load = vi.spyOn(importSessionStore, 'load').mockRejectedValue(new Error('storage unavailable'));
     await mount(); select();
     expect(FakeWorker.instances).toHaveLength(0);
-    expect((screen.getByRole('button', { name: 'Importar invitaciones' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Continuar' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText(/No se pudo guardar o leer la sesión local/)).toBeTruthy();
     expect(createInvitation).not.toHaveBeenCalled();
     load.mockRestore(); fireEvent.click(screen.getByRole('button', { name: 'Comprobar sesión local' }));
@@ -318,7 +328,7 @@ describe('vista previa y creación confirmada', () => {
     });
     vi.mocked(createInvitation).mockResolvedValue({ id: 'CONFIRMED', version: 'v1' } as Invitation);
     await mount(); await ready();
-    fireEvent.click(screen.getByRole('button', { name: 'Importar invitaciones' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Crear invitaciones' }));
     await screen.findByText('Importación detenida: comprueba la sesión local');
     expect(screen.getByRole('link', { name: 'Ver invitación' }).getAttribute('href')).toBe('/invitaciones/CONFIRMED');

@@ -14,7 +14,7 @@ export function ImportPreview({ analysis }: { analysis: ImportAnalysis }) {
     ['Invitaciones válidas', summary.validInvitations], ['Invitaciones con errores', summary.invalidInvitations],
     ['Cantidad de errores', summary.errors], ['Cantidad de advertencias', summary.warnings],
   ] as const;
-  return <div className="mt-5 space-y-5">
+  return <div className="import-page__preview space-y-5">
     <h2 className="font-admin-serif text-xl">Resumen del archivo</h2>
     {!analysis.valid && <p>Los totales de personas y cupos incluyen únicamente invitaciones válidas. Debes corregir todos los errores del archivo.</p>}
     <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
