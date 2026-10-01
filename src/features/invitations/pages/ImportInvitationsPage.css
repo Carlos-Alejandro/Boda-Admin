@@ -1,0 +1,52 @@
+.import-page {
+	max-width: 76rem;
+	margin-inline: auto;
+	font-size: clamp(.875rem, .75vw, 1rem);
+	line-height: 1.55;
+	overflow-wrap: anywhere;
+}
+
+.import-page__card,
+.import-page__results,
+.import-page [aria-label="Confirmar importación"],
+.import-page [aria-label="Sesión local de importación"] { min-width: 0; }
+
+.import-page__card { padding: clamp(1rem, 1.5vw, 1.75rem); }
+
+.import-page__file {
+	max-width: 100%;
+	font-size: max(.875rem, 16px);
+}
+
+.import-page__file::file-selector-button {
+	min-height: 2.75rem;
+	margin-right: .75rem;
+	border: 1px solid var(--border);
+	border-radius: .5rem;
+	background: var(--surface-soft);
+	padding: .5rem .75rem;
+	color: var(--green-950);
+	font: inherit;
+	cursor: pointer;
+}
+
+.import-page__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: .75rem;
+}
+
+.import-page__actions > [aria-label="Confirmar importación"],
+.import-page__results,
+.import-page__actions > [role="alert"] { flex: 1 1 100%; }
+.import-page__actions > [aria-label="Confirmar importación"] > button { margin: .25rem .5rem .25rem 0; }
+.import-page__results progress { display: block; width: 100%; max-width: 100%; height: .9rem; }
+.import-page__results ul { max-height: min(30rem, 55dvh); overflow-y: auto; padding-left: 1.35rem; }
+
+@media (max-width: 36rem) {
+	.import-page__actions > button,
+	.import-page__actions > a,
+	.import-page__actions > [aria-label="Confirmar importación"] > button { width: 100%; }
+	.import-page__file::file-selector-button { margin-bottom: .5rem; }
+}

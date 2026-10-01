@@ -11,7 +11,7 @@ export function DashboardPage() {
 
 	return (
 		<section
-			className="w-full text-[0.9rem] max-md:text-[0.9375rem]"
+			className="dashboard-page w-full min-w-0 text-[0.9rem] max-md:text-[0.9375rem]"
 			aria-labelledby="dashboard-title"
 		>
 			<header className="dashboard-hero">

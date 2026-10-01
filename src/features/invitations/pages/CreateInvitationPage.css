@@ -1,4 +1,4 @@
-.create-invitation-form { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(18rem, 0.85fr); align-items: start; width: 100%; margin-top: 1.2rem; border: 1px solid var(--border); border-radius: 0.9rem; background: #fbf9f4; box-shadow: var(--shadow); overflow: hidden; }
+.create-invitation-form { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(18rem, 0.85fr); align-items: start; width: 100%; max-width: 90rem; margin: 1.2rem auto 0; border: 1px solid var(--border); border-radius: 0.9rem; background: #fbf9f4; box-shadow: var(--shadow); overflow: hidden; }
 .create-invitation-form input[type="text"],
 .create-invitation-form input[type="number"] { width: 100%; min-height: 2.5rem; padding: 0.45rem 0.7rem; border: 1px solid #cfc8b9; border-radius: 0.5rem; outline: none; background: #fff; color: var(--green-950); font-size: 0.875rem; transition: border-color 160ms ease, box-shadow 160ms ease; }
 .create-invitation-form input:focus-visible { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(169, 132, 69, 0.15); }
@@ -20,7 +20,7 @@
 .create-invitation-form__guest-row,
 .create-invitation-form__actions,
 .create-invitation-form__checkbox { display: flex; align-items: center; gap: 0.65rem; }
-.create-invitation-form__guest-row label { flex: 1; }
+.create-invitation-form__guest-row label { flex: 1; min-width: 0; }
 .create-invitation-form__add-person,
 .create-invitation-form__remove-person { min-height: 2.4rem; padding: 0.42rem 0.75rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 700; }
 .create-invitation-form__add-person { justify-self: start; border: 1px solid #9db0a7; background: #f4f7f4; color: var(--green-700); }
@@ -44,6 +44,13 @@
 	.create-invitation-form input[type="text"],
 	.create-invitation-form input[type="number"] { min-height: 2.65rem; font-size: 1rem; }
 	.create-invitation-form { grid-template-columns: 1fr; }
+	.create-invitation-form__main,
+	.create-invitation-form__side { grid-column: 1; }
+	.create-invitation-form__side { border-left: 0; }
+}
+
+@media (min-width: 48.001rem) and (max-width: 70rem) {
+	.create-invitation-form { grid-template-columns: minmax(0, 1fr); }
 	.create-invitation-form__main,
 	.create-invitation-form__side { grid-column: 1; }
 	.create-invitation-form__side { border-left: 0; }

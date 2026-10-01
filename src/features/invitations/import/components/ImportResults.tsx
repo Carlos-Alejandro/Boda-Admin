@@ -9,7 +9,7 @@ export function ImportResults({ items, running, reconciling = false, storageBloc
   const blocked = items.some(item => item.status === 'failed' && !retryableFailure(item));
   const processed = count('created') + count('failed') + count('unknown');
   const activeIndex = items.findIndex(item => item.status === 'creating');
-  return <section aria-label="Resultado de importación" className="mt-5 space-y-3 rounded-xl border border-admin-border bg-surface p-4">
+  return <section aria-label="Resultado de importación" className="import-page__results mt-5 space-y-3 rounded-xl border border-admin-border bg-surface p-4">
     <div role="status" aria-live="polite" aria-atomic="true">
       <h2 className="font-bold">{running ? activeIndex < 0 ? 'Actualizando sesión local…' : reconciling ? 'Reconciliando resultado con la misma clave…' : `Creando invitación ${activeIndex + 1} de ${items.length}` : storageBlocked ? 'Importación detenida: comprueba la sesión local' : completed ? 'Importación completada' : 'Importación detenida'}</h2>
       <p>{processed} / {items.length} procesadas</p>

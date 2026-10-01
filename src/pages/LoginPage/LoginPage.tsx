@@ -26,7 +26,7 @@ export function LoginPage() {
 	};
 
 	return (
-		<main className="grid min-h-screen place-items-center p-[var(--content-padding)]">
+		<main className="grid min-h-screen min-h-dvh place-items-center p-[var(--content-padding)]">
 			<section className="w-full max-w-md rounded-2xl border border-admin-border bg-surface p-[clamp(1.5rem,4vw,2rem)] text-[0.9rem] shadow-admin" aria-labelledby="login-title">
 				<p className="m-0 text-admin-eyebrow font-extrabold tracking-[0.12em] text-[#927039] uppercase">Panel administrativo</p>
 				<h1 className="mt-1 mb-2.5 font-admin-serif text-[1.75rem] font-medium tracking-[-0.025em]" id="login-title">Boda Admin</h1>

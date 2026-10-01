@@ -25,8 +25,9 @@
 	background: var(--color-cream);
 	font-synthesis: none;
 	text-rendering: optimizeLegibility;
-	--page-max-width: 78rem;
-	--content-padding: clamp(1rem, 3vw, 2rem);
+	--sidebar-width: clamp(15.625rem, calc(10rem + 7.5vw), 18.75rem);
+	--page-max-width: 88rem;
+	--content-padding: clamp(1rem, 2.6vw, 2.75rem);
 	--cream: var(--color-cream);
 	--surface: var(--color-surface);
 	--surface-soft: var(--color-surface-soft);
@@ -41,6 +42,10 @@
 	--shadow: var(--shadow-admin);
 }
 
-@media (min-width: 75rem) {
-	:root { --page-max-width: 82rem; }
+@media (min-width: 120rem) {
+	:root { --page-max-width: 104rem; }
+}
+
+@media (max-width: 56.25rem) {
+	:root { --sidebar-width: 0px; }
 }

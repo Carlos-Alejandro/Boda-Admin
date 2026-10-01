@@ -6,6 +6,7 @@ import { useImportPreview } from '../import/model/useImportPreview';
 import { useImportExecution } from '../import/model/useImportExecution';
 import { ImportResults } from '../import/components/ImportResults';
 import { ImportSessionPanel } from '../import/components/ImportSessionPanel';
+import './ImportInvitationsPage.css';
 
 export function ImportInvitationsPage() {
   const { state, selectFile } = useImportPreview();
@@ -15,13 +16,13 @@ export function ImportInvitationsPage() {
   useEffect(() => {
     if (execution.phase === 'confirming') confirmation.current?.focus();
   }, [execution.phase]);
-  return <section aria-labelledby="import-title" className="w-full text-sm">
+  return <section aria-labelledby="import-title" className="import-page w-full min-w-0 text-sm">
     <PageHeader title="Importar invitaciones" titleId="import-title" eyebrow="Gestión de invitaciones" description="Revisa tu Excel localmente y confirma la creación de las invitaciones." />
-    <div className="mt-5 space-y-4 rounded-xl border border-admin-border bg-surface p-4">
+    <div className="import-page__card mt-5 space-y-4 rounded-xl border border-admin-border bg-surface p-4">
       <a className="inline-block font-semibold underline" href={`${import.meta.env.BASE_URL}templates/plantilla-invitaciones-v1.xlsx`} download="plantilla-invitaciones-v1.xlsx">Descargar plantilla XLSX</a>
       <p>Completa únicamente la hoja Invitaciones: una invitación por fila y una persona por columna, desde Invitado 1, sin huecos. Puedes agregar más columnas Invitado N consecutivamente. No escribas códigos ni IDs; el sistema generará los IDs al crear las invitaciones. Usa valores, no fórmulas.</p>
       <label className="block font-semibold" htmlFor="import-file">Seleccionar archivo XLSX</label>
-      <input id="import-file" type="file" disabled={execution.fileBlocked} accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="block w-full min-w-0" onChange={(event) => {
+      <input id="import-file" type="file" disabled={execution.fileBlocked} accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="import-page__file block w-full min-w-0" onChange={(event) => {
         const file = event.target.files?.[0];
         event.target.value = '';
         if (file && execution.reset()) void selectFile(file);
@@ -42,7 +43,7 @@ export function ImportInvitationsPage() {
     {execution.phase === 'loading' && <p role="status">Comprobando sesión local…</p>}
     {execution.session && <ImportSessionPanel key={execution.session.id} session={execution.session} recovered={execution.recovered} busy={execution.phase === 'running' || execution.phase === 'loading'} storageBlocked={execution.storageBlocked} onResume={execution.resume} onRemove={execution.remove} />}
     {(state.status === 'valid' || state.status === 'invalid') && !execution.session && !execution.previewConsumed && <ImportPreview analysis={state.analysis} />}
-    <div className="mt-6 space-y-3">
+    <div className="import-page__actions mt-6">
       <Button id="start-import" type="button" variant="primary" disabled={!execution.eligible} onClick={execution.open}>Importar invitaciones</Button>
       {execution.phase === 'confirming' && analysis && <div ref={confirmation} tabIndex={-1} role="region" aria-label="Confirmar importación" className="space-y-3 rounded-xl border border-admin-border p-4">
         <p>Se crearán {analysis.invitations.length} invitaciones con {analysis.summary.totalSlots} cupos en total.</p>

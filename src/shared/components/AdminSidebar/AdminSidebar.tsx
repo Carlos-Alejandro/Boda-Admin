@@ -26,8 +26,8 @@ export function AdminSidebar() {
 	const location = useLocation();
 	const invitationRouteActive = location.pathname.startsWith('/invitaciones');
 	const invitationDetailActive = invitationRouteActive && location.pathname !== '/invitaciones' && location.pathname !== '/invitaciones/nueva' && location.pathname !== '/invitaciones/importar';
-	const [expandedByUser, setExpandedByUser] = useState(false);
-	const expanded = invitationRouteActive || expandedByUser;
+	const [navigationState, setNavigationState] = useState({ route: location.pathname, expanded: invitationRouteActive });
+	const expanded = navigationState.route === location.pathname ? navigationState.expanded : invitationRouteActive;
 
 	return (
 		<aside className="admin-sidebar">
@@ -56,13 +56,13 @@ export function AdminSidebar() {
 						type="button"
 						aria-expanded={expanded}
 						aria-controls="admin-sidebar-invitations"
-						onClick={() => setExpandedByUser((value) => !value)}
+						onClick={() => setNavigationState({ route: location.pathname, expanded: !expanded })}
 					>
 						<span className="admin-sidebar__nav-icon"><InvitationIcon /></span>
 						<span>Invitaciones</span>
 						<ChevronIcon expanded={expanded} />
 					</button>
-					<div id="admin-sidebar-invitations" className={`admin-sidebar__submenu${expanded ? ' admin-sidebar__submenu--expanded' : ''}`}>
+					<div id="admin-sidebar-invitations" inert={!expanded} className={`admin-sidebar__submenu${expanded ? ' admin-sidebar__submenu--expanded' : ''}`}>
 						<NavLink className={() => navigationClassName({ isActive: location.pathname === '/invitaciones' || invitationDetailActive })} to="/invitaciones" end>
 							<span className="admin-sidebar__subnav-dot" aria-hidden="true" />
 							Todas

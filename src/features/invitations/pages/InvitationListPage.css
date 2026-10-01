@@ -1,13 +1,11 @@
 .invitation-list-page {
 	position: relative;
-	left: 50%;
-	width: min(96rem, calc(100vw - 15rem - (2 * var(--content-padding))));
-	max-width: none;
+	width: 100%;
 	min-width: 0;
 	color: var(--color-admin-green-900);
 	font-size: .94rem;
-	transform: translateX(-50%);
 	isolation: isolate;
+	container-type: inline-size;
 }
 
 .invitation-list-page > header {
@@ -817,7 +815,7 @@
 }
 .invitation-confirmation-dialog > section { margin: 0; border: 0; background: transparent; padding: 1.2rem; }
 
-@media (max-width: 74rem) {
+@container (max-width: 58rem) {
 	.invitation-skeleton__header { display: none; }
 	.invitation-skeleton__visual { gap: .75rem; }
 	.invitation-skeleton__row {
@@ -866,16 +864,7 @@
 	.invitation-actions__menu { right: auto; left: 0; }
 }
 
-@media (max-width: 64rem) {
-	.invitation-list-page {
-		width: calc(100vw - 13rem - (2 * var(--content-padding)));
-	}
-}
-
 @media (max-width: 48rem) {
-	.invitation-list-page {
-		width: calc(100vw - (2 * var(--content-padding)));
-	}
 	.invitation-list-page > header h1 { font-size: 2.35rem; }
 	.invitation-list-page > header p:last-child { font-size: 1rem; }
 	.invitation-toolbar { align-items: stretch; }
@@ -913,6 +902,18 @@
 	.invitation-pagination { flex-wrap: wrap; }
 	.invitation-pagination > button { flex: 1 1 auto; }
 	.invitation-pagination__pages { order: -1; width: 100%; justify-content: center; }
+}
+
+@media (max-width: 23.5rem) {
+	.invitation-toolbar > a,
+	.invitation-filter-control { flex: 1 1 100%; width: 100%; }
+	.invitation-toolbar > .invitation-toolbar__create,
+	.invitation-toolbar > .invitation-toolbar__import { width: 100%; }
+	.invitation-table tr,
+	.invitation-skeleton__row { grid-template-columns: minmax(0, 1fr); }
+	.invitation-table td,
+	.invitation-table__identity-cell,
+	.invitation-table__actions-cell { grid-column: 1 / -1; }
 }
 
 @media (prefers-reduced-motion: reduce) {

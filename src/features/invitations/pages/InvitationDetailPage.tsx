@@ -157,7 +157,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
 						onUnavailable={() => { setChangingCapacity(false); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
 						onReload={() => { setChangingCapacity(false); setNotice(''); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
 					/>}
-					<div className="grid items-start gap-4 min-[75rem]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+					<div className="grid items-start gap-4 min-[90rem]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
 						<div className="grid min-w-0 gap-4">
 							<DetailCard title="Invitados">
 								<ol className="m-0 grid list-none gap-3 p-0">

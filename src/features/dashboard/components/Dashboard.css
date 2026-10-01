@@ -2,6 +2,8 @@
    Dashboard hero
    ───────────────────────────────────────────── */
 
+.dashboard-page { container-type: inline-size; }
+
 .dashboard-hero {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) minmax(0, 25rem);
@@ -573,7 +575,7 @@
    Responsive
    ───────────────────────────────────────────── */
 
-@media (max-width: 75rem) {
+@container (max-width: 56rem) {
 	.dashboard-stats {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
@@ -585,7 +587,7 @@
 	}
 }
 
-@media (max-width: 48rem) {
+@container (max-width: 48rem) {
 	.dashboard-hero {
 		grid-template-columns: minmax(0, 1fr);
 		gap: .8rem;
@@ -598,7 +600,7 @@
 
 }
 
-@media (max-width: 36rem) {
+@container (max-width: 36rem) {
 	.dashboard-stats,
 	.dashboard-quick {
 		grid-template-columns: minmax(0, 1fr);
@@ -632,6 +634,6 @@
 
 
 }
-@media (max-width: 70rem) {
+@container (max-width: 68rem) {
  .dashboard-hero { grid-template-columns: minmax(0, 1fr); gap: .8rem; }
 }
