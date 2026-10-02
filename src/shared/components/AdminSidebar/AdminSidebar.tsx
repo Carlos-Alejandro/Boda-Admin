@@ -38,8 +38,8 @@ export function AdminSidebar() {
 	const expanded = navigationState.route === location.pathname ? navigationState.expanded : invitationRouteActive;
 	const closeDrawer = useCallback(() => {
 		setDrawerState((state) => ({ ...state, open: false }));
-		if (isMobile) openButtonRef.current?.focus();
-	}, [isMobile]);
+		if (isDrawerOpen) openButtonRef.current?.focus();
+	}, [isDrawerOpen]);
 
 	useEffect(() => {
 		const media = window.matchMedia?.(mobileNavigationQuery);
@@ -95,8 +95,8 @@ export function AdminSidebar() {
 				<button ref={openButtonRef} className="admin-mobile-topbar__menu" type="button" aria-label="Abrir menú" aria-controls="admin-mobile-drawer" aria-expanded={isDrawerOpen} onClick={() => setDrawerState({ route: location.key, open: true })}>
 					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
 				</button>
-				<span className="admin-mobile-topbar__title">Boda-Admin</span>
-				<span className="admin-sidebar__brand-mark admin-mobile-topbar__mark" aria-hidden="true">B</span>
+				<NavLink className="admin-mobile-topbar__title" to="/" onClick={closeDrawer}>Boda-Admin</NavLink>
+				<NavLink className="admin-sidebar__brand-mark admin-mobile-topbar__mark" to="/" aria-label="Boda-Admin, ir al Dashboard" onClick={closeDrawer}>B</NavLink>
 			</header>
 			<button className="admin-mobile-overlay" type="button" hidden={!isDrawerOpen} aria-label="Cerrar menú al tocar fuera" tabIndex={-1} onClick={closeDrawer} />
 			<aside ref={drawerRef} id="admin-mobile-drawer" className={`admin-sidebar${isDrawerOpen ? ' admin-sidebar--open' : ''}`} role={isMobile ? 'dialog' : undefined} aria-modal={isDrawerOpen ? true : undefined} aria-label={isMobile ? 'Menú de navegación' : undefined} aria-hidden={isMobile && !isDrawerOpen ? true : undefined} inert={isMobile && !isDrawerOpen}>

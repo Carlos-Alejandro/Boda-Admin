@@ -285,12 +285,19 @@
 	.admin-mobile-topbar__title {
 		min-width: 0;
 		flex: 1;
+		color: inherit;
 		font-family: var(--font-admin-serif);
 		font-size: 1.1rem;
 		font-weight: 500;
+		text-decoration: none;
 		white-space: nowrap;
 	}
 	.admin-mobile-topbar__mark { width: 2.5rem; height: 2.5rem; font-size: 1.2rem; }
+	.admin-mobile-topbar__title:focus-visible,
+	.admin-mobile-topbar__mark:focus-visible {
+		outline: 2px solid rgba(231, 201, 139, .92);
+		outline-offset: 2px;
+	}
 	.admin-mobile-overlay {
 		position: fixed;
 		inset: 0;

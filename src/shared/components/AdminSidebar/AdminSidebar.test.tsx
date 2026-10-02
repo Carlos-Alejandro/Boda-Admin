@@ -57,6 +57,42 @@ describe('navegación responsive del Admin', () => {
 		expect(screen.getByRole('main').textContent).toContain('Listado actual');
 	});
 
+	it.each(['Boda-Admin', 'B'])('navega al Dashboard desde %s en el branding desktop', (target) => {
+		mount('/invitaciones');
+		const brand = screen.getByRole('link', { name: /Boda-Admin/ });
+		expect(brand.getAttribute('href')).toBe('/');
+		fireEvent.click(within(brand).getByText(target, { exact: true }));
+		expect(screen.getByRole('main').textContent).toContain('Dashboard actual');
+	});
+
+	it.each([
+		['texto', 'Boda-Admin'],
+		['círculo', 'Boda-Admin, ir al Dashboard'],
+	])('navega al Dashboard desde el %s de la barra móvil', (_part, name) => {
+		mobile = true;
+		mount('/invitaciones');
+		const brand = screen.getByRole('link', { name });
+		expect(brand.getAttribute('href')).toBe('/');
+		brand.focus();
+		fireEvent.click(brand);
+		expect(screen.getByRole('main').textContent).toContain('Dashboard actual');
+		expect(screen.queryByRole('dialog')).toBeNull();
+		expect(document.activeElement).toBe(brand);
+	});
+
+	it.each(['Boda-Admin', 'B'])('navega desde %s en el drawer y lo cierra', (target) => {
+		mobile = true;
+		mount('/invitaciones');
+		const drawer = openDrawer();
+		const brand = within(drawer).getByRole('link', { name: /Boda-Admin/ });
+		expect(brand.getAttribute('href')).toBe('/');
+		fireEvent.click(within(brand).getByText(target, { exact: true }));
+		expect(screen.getByRole('main').textContent).toContain('Dashboard actual');
+		expect(screen.queryByRole('dialog')).toBeNull();
+		expect(document.body.style.overflow).toBe('');
+		expect(screen.getByRole('button', { name: 'Abrir menú' }).getAttribute('aria-expanded')).toBe('false');
+	});
+
 	it('en móvil inicia cerrado con barra compacta, navegación inerte y contenido disponible', () => {
 		mobile = true;
 		mount();
