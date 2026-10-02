@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
 import { utils, write } from 'xlsx';
 import { readWorkbook } from './readWorkbook';
@@ -71,9 +72,30 @@ describe('adaptador XLSX real', () => {
     const workbook = readWorkbook(file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength));
     expect(workbook.sheets.map((sheet) => sheet.name)).toEqual(['Instrucciones', 'Invitaciones']);
     for (const sheet of workbook.sheets.filter((sheet) => sheet.name !== 'Instrucciones')) {
-      expect(sheet.rows).toHaveLength(1);
+      expect(sheet.mergedCells).toEqual([]);
       expect(sheet.rows[0].cells.map((cell) => cell.value)).toEqual([...FIXED_HEADERS, ...Array.from({ length: 10 }, (_, index) => `Invitado ${index + 1}`)]);
+      expect(sheet.rows.slice(1).every((row) => row.cells.every((cell) => cell.value == null && !cell.formula))).toBe(true);
     }
     expect(validateWorkbook(workbook).issues.map((issue) => issue.code)).toEqual(['EMPTY_IMPORT']);
+    expect(validateWorkbook(workbook).summary.invitations).toBe(0);
+    const instructions = workbook.sheets[0].rows.flatMap((row) => row.cells.map((cell) => cell.value));
+    expect(instructions).toContain('Ejemplo de cómo llenar la plantilla');
+    expect(instructions).toContain('Sí permite reemplazar a una persona invitada cuando corresponda; No lo impide.');
+  });
+  it('la plantilla completada pasa por el lector y validador reales sin importar el ejemplo', async () => {
+    const copy = new ExcelJS.Workbook();
+    await copy.xlsx.readFile('public/templates/plantilla-invitaciones-v1.xlsx');
+    const sheet = copy.getWorksheet('Invitaciones');
+    expect(sheet).toBeDefined();
+    sheet!.getRow(2).values = ['Familia Martínez', 1, 'Sí', 'Carlos Martínez', 'María López'];
+    const data = Uint8Array.from(await copy.xlsx.writeBuffer() as unknown as Uint8Array);
+    const workbook = readWorkbook(data.buffer);
+    const result = validateWorkbook(workbook);
+    expect(result.valid).toBe(true);
+    expect(result.summary).toMatchObject({ invitations: 1, identifiedPeople: '2', openSlots: '1', totalSlots: '3' });
+    expect(result.invitations[0].input).toEqual({
+      displayName: 'Familia Martínez', openSlots: 1, replacementsAllowed: true,
+      knownGuests: [{ name: 'Carlos Martínez' }, { name: 'María López' }],
+    });
   });
 });
