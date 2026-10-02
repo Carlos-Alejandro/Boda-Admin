@@ -1,14 +1,18 @@
-.create-invitation-page { container-type: inline-size; }
+.create-invitation-page {
+	container-type: inline-size;
+	color: var(--color-admin-green-900);
+	font-size: .94rem;
+}
 
 .create-invitation-form {
 	display: grid;
 	grid-template-columns: minmax(0, 7fr) minmax(17rem, 3fr);
 	width: 100%;
-	margin: 1rem auto 0;
+	margin: 1.75rem auto 0;
 	overflow: hidden;
-	border: 1px solid var(--border);
-	border-radius: .9rem;
-	background: var(--surface);
+	border: 1px solid #e5ded0;
+	border-radius: .65rem;
+	background: rgba(255, 254, 250, .9);
 	box-shadow: 0 .5rem 1.6rem rgba(34, 54, 45, .04);
 }
 
@@ -29,7 +33,7 @@
 	grid-template-columns: 2.35rem minmax(0, 1fr);
 	align-items: start;
 	gap: .85rem;
-	padding: .95rem 1.15rem;
+	padding: 1.1rem 1.15rem;
 	border-bottom: 1px solid var(--border);
 }
 .create-invitation-form__row:last-child { border-bottom: 0; }
@@ -52,22 +56,22 @@ fieldset.create-invitation-form__row { min-inline-size: 0; margin: 0; border-top
 .create-invitation-form__row-content h2 {
 	margin: 0;
 	color: var(--green-950);
-	font-size: .86rem;
+	font-size: .9rem;
 	font-weight: 700;
 	line-height: 1.35;
 }
-.create-invitation-form__help { margin: 0; color: var(--text-muted); font-size: .76rem; line-height: 1.45; }
+.create-invitation-form__help { margin: 0; color: var(--text-muted); font-size: .82rem; line-height: 1.45; }
 .create-invitation-form input[type="text"],
 .create-invitation-form input[type="number"] {
 	width: 100%;
-	min-height: 2.55rem;
+	min-height: 3.15rem;
 	padding: .45rem .7rem;
 	border: 1px solid #cfc8b9;
-	border-radius: .5rem;
+	border-radius: .65rem;
 	outline: none;
 	background: #fff;
 	color: var(--green-950);
-	font-size: .875rem;
+	font-size: .9rem;
 	transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 .create-invitation-form input[type="text"]:focus-visible,
@@ -135,7 +139,7 @@ fieldset.create-invitation-form__row { min-inline-size: 0; margin: 0; border-top
 .create-invitation-form__info p { margin: 0; font-size: .76rem; line-height: 1.45; }
 .create-invitation-form__alert { margin: 0; padding: .7rem .8rem; border: 1px solid #e5c6bd; border-radius: .5rem; background: #fff7f5; color: var(--danger); font-size: .8rem; }
 .create-invitation-form__actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: .6rem; margin-top: auto; padding-top: .35rem; }
-.create-invitation-form__actions > * { width: 100%; white-space: nowrap; }
+.create-invitation-form__actions > * { width: 100%; min-height: 3.15rem; font-family: var(--font-admin-serif); font-size: .9rem; font-weight: 500; white-space: nowrap; }
 
 @container (max-width: 52rem) {
 	.create-invitation-form { grid-template-columns: minmax(0, 1fr); }

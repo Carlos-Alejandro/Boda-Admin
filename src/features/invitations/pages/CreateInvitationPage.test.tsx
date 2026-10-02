@@ -29,6 +29,8 @@ describe('feedback al crear una invitación', () => {
 
 	it('mantiene las validaciones de campos inline y no las convierte en toast', () => {
 		mount();
+		expect(screen.queryByText('Gestión de invitaciones')).toBeNull();
+		expect(screen.getByRole('heading', { level: 1, name: 'Nueva invitación' })).toBeTruthy();
 		fireEvent.click(screen.getByRole('button', { name: 'Crear invitación' }));
 
 		expect(screen.getByText('Ingresa el nombre de la invitación.')).toBeTruthy();

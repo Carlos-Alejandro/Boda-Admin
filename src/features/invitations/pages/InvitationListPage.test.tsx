@@ -109,7 +109,7 @@ describe('listado de invitaciones', () => {
 	it('muestra encabezado, columnas y datos reales sin contar slots anónimos ni originalName', async () => {
 		mount();
 		const table = await ready();
-		expect(screen.getByText(/Nuestra boda/i)).toBeTruthy();
+		expect(screen.queryByText(/Nuestra boda/i)).toBeNull();
 		expect(screen.getByRole('heading', { level: 1, name: 'Invitaciones' })).toBeTruthy();
 		expect(screen.getByText('Administra, busca y gestiona las invitaciones de tu boda.')).toBeTruthy();
 		expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual([

@@ -49,7 +49,7 @@ export function ImportInvitationsPage() {
   };
 
   return <section aria-labelledby="import-title" className="import-page w-full min-w-0">
-    <PageHeader title="Importar invitaciones" titleId="import-title" eyebrow="Gestión de invitaciones" description="Crea tus invitaciones fácilmente desde un archivo de Excel." />
+    <PageHeader className="invitation-page-header" title="Importar invitaciones" titleId="import-title" description="Crea tus invitaciones fácilmente desde un archivo de Excel." />
 
     <ol className="import-page__steps" aria-label="Etapas de importación">
       {steps.map((label, index) => <li key={label} className={index + 1 === step ? 'import-page__step import-page__step--current' : 'import-page__step'} aria-current={index + 1 === step ? 'step' : undefined}>

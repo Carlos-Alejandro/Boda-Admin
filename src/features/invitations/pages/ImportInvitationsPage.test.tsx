@@ -56,6 +56,8 @@ describe('vista previa y creación confirmada', () => {
   it('habilita importar con preview válido sin enviar datos antes de confirmar', async () => {
     const storage = vi.spyOn(Storage.prototype, 'setItem');
     await mount();
+    expect(screen.queryByText('Gestión de invitaciones')).toBeNull();
+    expect(screen.getByRole('heading', { level: 1, name: 'Importar invitaciones' })).toBeTruthy();
     select();
     expect(screen.getByText('Leyendo y validando todo el archivo…')).toBeTruthy();
     await act(async () => { await Promise.resolve(); });

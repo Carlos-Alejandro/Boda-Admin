@@ -225,7 +225,7 @@ export function InvitationListPage() {
 	return (
 		<section className="invitation-list-page" aria-labelledby="invitations-title">
 			<PageHeader
-				eyebrow="Nuestra boda"
+				className="invitation-page-header"
 				title="Invitaciones"
 				titleId="invitations-title"
 				description="Administra, busca y gestiona las invitaciones de tu boda."

@@ -139,12 +139,11 @@ export function CreateInvitationPage() {
 
 	return (
 		<section
-			className="create-invitation-page w-full text-[0.9rem] max-md:text-[0.9375rem]"
+			className="create-invitation-page w-full"
 			aria-labelledby="create-invitation-title"
 		>
 			<PageHeader
-				className="min-[75rem]:max-w-[46rem] min-[75rem]:[&_h1]:text-[1.95rem] min-[75rem]:[&_p:last-child]:text-[0.88rem]"
-				eyebrow="Gestión de invitaciones"
+				className="invitation-page-header"
 				title="Nueva invitación"
 				titleId="create-invitation-title"
 				description="Crea una invitación personalizada y define las personas y lugares disponibles."
