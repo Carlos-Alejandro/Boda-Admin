@@ -79,18 +79,22 @@ export function DashboardPage() {
 			</header>
 
 			{state.status === 'loading' && (
-				<p
-					role="status"
-					className="mt-5 rounded-xl border border-dashed border-admin-border px-4 py-8 text-center text-admin-muted"
-				>
-					Cargando resumen de la boda...
-				</p>
+				<div role="status" aria-live="polite" className="dashboard-loading">
+					<span className="visually-hidden">Cargando resumen de la boda...</span>
+					<div className="dashboard-loading__cards" aria-hidden="true">
+						{Array.from({ length: 4 }, (_, index) => (
+							<div className="dashboard-loading__card" key={index}>
+								<span /><span /><span />
+							</div>
+						))}
+					</div>
+				</div>
 			)}
 
 			{state.status === 'error' && (
 				<div
 					role="alert"
-					className="mt-5 rounded-xl border border-admin-border bg-surface p-5"
+					className="dashboard-error"
 				>
 					<p className="mt-0 mb-3 text-admin-danger">
 						No fue posible cargar el resumen de la boda.
