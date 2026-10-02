@@ -41,15 +41,13 @@
    Decoración derecha del encabezado
    ───────────────────────────────────────────── */
 
-/* One composition box; child cqw units scale against its actual width.
- * The WEBP includes white margins: reserve its full box while aligning the ink.
- */
+/* One composition box; child cqw units scale against its actual width. */
 .dashboard-hero__aside {
  position: relative;
  justify-self: end;
  width: min(25rem, 100%);
  min-width: 0;
- aspect-ratio: 25 / 10;
+ min-height: 7rem;
  container-type: inline-size;
 }
 
@@ -90,18 +88,6 @@
  font-size: 4cqw;
  line-height: 1;
 }
-.dashboard-hero__branch {
-	position: absolute;
-	right: 0;
-	bottom: 0;
-	width: 18cqw;
-	height: auto;
-	object-fit: contain;
-	mix-blend-mode: multiply;
-	pointer-events: none;
-	user-select: none;
-}
-
 /* ─────────────────────────────────────────────
    Dashboard content
    ───────────────────────────────────────────── */

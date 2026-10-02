@@ -22,7 +22,8 @@ describe('Dashboard funcional', () => {
   expect(screen.getByRole('status').textContent).toContain('Cargando');
   const decoration = document.querySelector('.dashboard-hero__decoration');
   expect(decoration).toBeTruthy();
-  expect(decoration?.querySelector('.dashboard-hero__branch')).toBeTruthy();
+  expect(decoration?.querySelector('img')).toBeNull();
+  expect(decoration?.textContent).toContain('Grandes momentos');
   expect(screen.queryByRole('group', { name: 'Resumen en cuatro tarjetas' })).toBeNull();
   expect(getInvitations).toHaveBeenCalledTimes(1);
   expect(getInvitations).toHaveBeenCalledWith();

@@ -2,8 +2,6 @@
 import { DashboardSummary } from '../components/DashboardSummary';
 import { useDashboardMetrics } from '../model/useDashboardMetrics';
 
-import dashboardBranch from '../../../assets/dashboard/rama-admin.webp';
-
 import '../components/Dashboard.css';
 
 export function DashboardPage() {
@@ -76,12 +74,6 @@ export function DashboardPage() {
                                 comienzan con personas especiales
                             </strong>
                         </div>
-
-                        <img
-                            className="dashboard-hero__branch"
-                            src={dashboardBranch}
-                            alt=""
-                        />
                     </div>
                 </div>
 			</header>
