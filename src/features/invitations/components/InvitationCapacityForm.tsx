@@ -86,26 +86,25 @@ export function InvitationCapacityForm({ invitation, onCancel, onSaved, onUnavai
 	};
 
 	return (
-		<form onSubmit={handleSubmit} noValidate aria-labelledby="capacity-title" aria-describedby={error ? 'capacity-error' : undefined} aria-busy={saving} className="mb-5 rounded-xl border border-admin-border bg-surface p-4 sm:p-5">
-			<h2 id="capacity-title" className="mt-0 mb-3 font-admin-serif text-[1.1rem] font-medium">Cambiar capacidad</h2>
-			<p className="mt-0 text-sm text-admin-muted">Capacidad actual: {invitation.maxGuests} {invitation.maxGuests === 1 ? 'invitado' : 'invitados'}</p>
+		<form onSubmit={handleSubmit} noValidate aria-labelledby="capacity-title" aria-describedby={error ? 'capacity-error' : undefined} aria-busy={saving} className="my-3 rounded-xl border border-admin-border bg-surface p-4 sm:p-5">
+			<h2 id="capacity-title" className="mt-0 mb-3 font-admin-serif text-[1.1rem] font-medium">Ajustar lugares</h2>
 			<label htmlFor="new-capacity" className="grid max-w-xs gap-1.5 text-sm font-semibold">
-				Nueva capacidad
+				Nueva cantidad de lugares
 				<input ref={input} id="new-capacity" type="number" min="1" step="1" required value={value} disabled={saving || reloadRequired || confirming} onChange={(event) => { setValue(event.target.value); setError(''); }} aria-invalid={Boolean(validation)} aria-describedby={validation ? 'capacity-help capacity-validation' : 'capacity-help'} className="min-h-10 w-full rounded-lg border border-admin-border bg-white px-3 py-2 text-base font-normal sm:text-sm" />
 			</label>
-			<p id="capacity-help" className="mt-2 mb-0 text-xs text-admin-muted">Capacidad mínima disponible actualmente: {minimum}. Previsión según los datos actuales; se validará de nuevo al guardar.</p>
+			<p id="capacity-help" className="mt-2 mb-0 text-xs text-admin-muted">Mínimo disponible: {minimum}. Se validará de nuevo al guardar.</p>
 			{validation && <p id="capacity-validation" role="alert" className="mt-3 mb-0 text-sm text-admin-danger">{validation}</p>}
 			{valid && !impossible && difference !== 0 && !confirming && <p role="status" className="mt-3 mb-0 text-sm">{difference > 0 ? `Se agregarán ${difference} espacios abiertos a esta invitación.` : `Se retirarán ${-difference} espacios abiertos disponibles.`}</p>}
 			{confirming && <div ref={confirmation} tabIndex={-1} className="mt-4 rounded-lg border border-admin-border bg-surface-soft p-3 text-sm">
-				<p className="m-0">Vas a reducir la capacidad de {invitation.maxGuests} a {capacity} invitados.</p>
+				<p className="m-0">Vas a reducir los lugares de {invitation.maxGuests} a {capacity}.</p>
 				<p className="mt-2 mb-0">Se eliminarán {-difference} espacios abiertos disponibles. La API elegirá los espacios elegibles con los datos vigentes al guardar.</p>
 			</div>}
 			{error && <p id="capacity-error" role="alert" className="mt-3 mb-0 text-sm text-admin-danger">{error}</p>}
-			{saving && <p role="status" className="mt-3 mb-0 text-xs text-admin-muted">Guardando capacidad. Espera antes de salir de la invitación.</p>}
+			{saving && <p role="status" className="mt-3 mb-0 text-xs text-admin-muted">Guardando lugares. Espera antes de salir de la invitación.</p>}
 			<div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
 				{reloadRequired ? <Button variant="secondary" type="button" onClick={onReload}>Recargar invitación</Button> : <>
 					<Button variant="secondary" type="button" disabled={saving} onClick={() => { if (!submitting.current) onCancel(); }}>Cancelar</Button>
-					<Button variant="primary" type="submit" disabled={!canSave}>{saving ? 'Guardando...' : confirming ? 'Confirmar reducción' : 'Guardar capacidad'}</Button>
+					<Button variant="primary" type="submit" disabled={!canSave}>{saving ? 'Guardando...' : confirming ? 'Confirmar reducción' : 'Guardar lugares'}</Button>
 				</>}
 			</div>
 		</form>

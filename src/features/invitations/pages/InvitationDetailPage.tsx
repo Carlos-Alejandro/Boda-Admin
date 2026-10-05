@@ -1,9 +1,7 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-
 import { ApiError } from '../../../services/http/apiClient';
 import { Button, ButtonLink } from '../../../shared/components/Button/Button';
-import { PageHeader } from '../../../shared/components/PageHeader/PageHeader';
 import { notify } from '../../../shared/notifications/notify';
 import { getInvitationById } from '../api/invitationService';
 import { InvitationStatusBadge } from '../components/InvitationStatusBadge';
@@ -15,252 +13,174 @@ import { EditInvitationGuestName } from '../components/EditInvitationGuestName';
 import { EditInvitationOverride, type OverrideAction } from '../components/EditInvitationOverride';
 import { InvitationArchiveConfirmation } from '../components/InvitationArchiveConfirmation';
 import type { GuestType, Invitation } from '../model/invitation.types';
+import { getPublicInvitationUrl } from '../model/publicInvitationUrl';
+import './InvitationDetailPage.css';
 
 const dateFormatter = new Intl.DateTimeFormat('es-MX', {
-	timeZone: 'America/Cancun',
-	day: '2-digit', month: '2-digit', year: 'numeric',
-	hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  timeZone: 'America/Cancun', day: 'numeric', month: 'short', year: 'numeric',
+  hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
 });
-
 function formatDate(value: string | null, fallback = 'Fecha no disponible') {
-	if (value === null) return fallback;
-	const date = new Date(value);
-	return Number.isNaN(date.getTime()) ? fallback : dateFormatter.format(date);
+  if (value === null) return fallback;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? fallback : dateFormatter.format(date);
 }
-
 const guestLabels: Record<GuestType, string> = {
-	known: 'Invitado', open: 'Espacio abierto', replacement: 'Invitado de reemplazo',
+  known: 'Invitado', open: 'Lugar sin asignar', replacement: 'Invitado de sustitución',
 };
+type DetailState = { status: 'loading' | 'not-found' | 'error' } | { status: 'success'; invitation: Invitation };
 
-type DetailState =
-	| { status: 'loading' | 'not-found' | 'error' }
-	| { status: 'success'; invitation: Invitation };
-
-function DetailCard({ title, children }: { title: string; children: ReactNode }) {
-	return (
-		<section className="min-w-0 rounded-xl border border-admin-border bg-surface p-4 sm:p-5">
-			<h2 className="mt-0 mb-4 font-admin-serif text-[1.1rem] font-medium">{title}</h2>
-			{children}
-		</section>
-	);
+function DetailIcon({ name }: { name: 'people' | 'invitation' | 'settings' }) {
+  const paths = {
+    people: <><circle cx="9" cy="8" r="3" /><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 5.5a3 3 0 0 1 0 5.8M17 14a5 5 0 0 1 3.5 5" /></>,
+    invitation: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" /></>,
+    settings: <><circle cx="12" cy="12" r="3" /><path d="M12 2.5v2m0 15v2M2.5 12h2m15 0h2M5.3 5.3l1.4 1.4m10.6 10.6 1.4 1.4m0-13.4-1.4 1.4M6.7 17.3l-1.4 1.4" /></>,
+  };
+  return <span className="invitation-detail__section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg></span>;
 }
-
-function DetailField({ label, children }: { label: string; children: ReactNode }) {
-	return (
-		<div className="min-w-0">
-			<dt className="mb-1 text-xs text-admin-muted">{label}</dt>
-			<dd className="m-0 leading-relaxed [overflow-wrap:anywhere]">{children}</dd>
-		</div>
-	);
+function DetailSection({ title, icon, description, children, action }: { title: string; icon: 'people' | 'invitation' | 'settings'; description: string; children: ReactNode; action?: ReactNode }) {
+  return <section className="invitation-detail__section" aria-label={title}>
+    <div className="invitation-detail__section-heading"><div className="invitation-detail__section-intro"><DetailIcon name={icon} /><div><h2>{title}</h2><p>{description}</p></div></div>{action}</div>
+    {children}
+  </section>;
+}
+function DetailRow({ label, children, action }: { label: string; children: ReactNode; action?: ReactNode }) {
+  return <div className="invitation-detail__data-row"><dt>{label}</dt><dd>{children}</dd>{action && <div className="invitation-detail__row-action">{action}</div>}</div>;
+}
+function TextAction({ children, onClick }: { children: ReactNode; onClick: () => void }) {
+  return <button type="button" className="invitation-detail__text-action" onClick={onClick}>{children}</button>;
 }
 
 export function InvitationDetailPage() {
-	const { id } = useParams<{ id: string }>();
-	// Remount the request state when navigating directly between invitation IDs.
-	return <InvitationDetail key={id} id={id} />;
+  const { id } = useParams<{ id: string }>();
+  return <InvitationDetail key={id} id={id} />;
 }
-
 function InvitationDetail({ id }: { id: string | undefined }) {
-	const [state, setState] = useState<DetailState>({ status: id ? 'loading' : 'not-found' });
-	const [attempt, setAttempt] = useState(0);
-	const [editing, setEditing] = useState(false);
-	const [changingCapacity, setChangingCapacity] = useState(false);
-	const [restoringIndex, setRestoringIndex] = useState<number | null>(null);
-	const [removingIndex, setRemovingIndex] = useState<number | null>(null);
-	const [editingNameIndex, setEditingNameIndex] = useState<number | null>(null);
-	const [overrideAction, setOverrideAction] = useState<OverrideAction | null>(null);
-	const [changingArchive, setChangingArchive] = useState(false);
-	const [notice, setNotice] = useState('');
+  const [state, setState] = useState<DetailState>({ status: id ? 'loading' : 'not-found' });
+  const [attempt, setAttempt] = useState(0);
+  const [editing, setEditing] = useState<'name' | 'replacements' | null>(null);
+  const [changingCapacity, setChangingCapacity] = useState(false);
+  const [restoringIndex, setRestoringIndex] = useState<number | null>(null);
+  const [removingIndex, setRemovingIndex] = useState<number | null>(null);
+  const [editingNameIndex, setEditingNameIndex] = useState<number | null>(null);
+  const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
+  const [overrideAction, setOverrideAction] = useState<OverrideAction | null>(null);
+  const [changingArchive, setChangingArchive] = useState(false);
+  const [notice, setNotice] = useState('');
 
-	useEffect(() => {
-		const controller = new AbortController();
-		if (!id) {
-			return () => controller.abort();
-		}
+  useEffect(() => {
+    const controller = new AbortController();
+    if (!id) return () => controller.abort();
+    void getInvitationById(id, controller.signal).then(
+      (invitation) => { if (!controller.signal.aborted) setState({ status: 'success', invitation }); },
+      (error: unknown) => { if (!controller.signal.aborted) setState({ status: error instanceof ApiError && error.status === 404 ? 'not-found' : 'error' }); },
+    );
+    return () => controller.abort();
+  }, [id, attempt]);
 
-		void getInvitationById(id, controller.signal).then(
-			(invitation) => {
-				if (!controller.signal.aborted) setState({ status: 'success', invitation });
-			},
-			(error: unknown) => {
-				if (!controller.signal.aborted) {
-					setState({ status: error instanceof ApiError && error.status === 404 ? 'not-found' : 'error' });
-				}
-			},
-		);
-		return () => controller.abort();
-	}, [id, attempt]);
+  useEffect(() => {
+    if (openMenuIndex === null) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        document.querySelector<HTMLButtonElement>('.invitation-detail__menu-trigger[aria-expanded="true"]')?.focus();
+        setOpenMenuIndex(null);
+      }
+    };
+    const closeOutside = (event: MouseEvent) => {
+      if (event.target instanceof Element && !event.target.closest('.invitation-detail__menu-wrap')) setOpenMenuIndex(null);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    document.addEventListener('mousedown', closeOutside);
+    return () => {
+      document.removeEventListener('keydown', closeOnEscape);
+      document.removeEventListener('mousedown', closeOutside);
+    };
+  }, [openMenuIndex]);
 
-	const invitation = state.status === 'success' ? state.invitation : null;
-	const idle = !editing && !changingCapacity && removingIndex === null && restoringIndex === null && editingNameIndex === null && !changingArchive && overrideAction === null;
+  const invitation = state.status === 'success' ? state.invitation : null;
+  const idle = editing === null && !changingCapacity && removingIndex === null && restoringIndex === null && editingNameIndex === null && !changingArchive && overrideAction === null;
+  const unavailable = () => { setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); };
+  const reload = (message = '') => { setNotice(message); setState({ status: 'loading' }); setAttempt((current) => current + 1); };
+  const copyLink = async () => {
+    if (!invitation) return;
+    try {
+      await navigator.clipboard.writeText(getPublicInvitationUrl(invitation.id));
+      notify.success('Enlace copiado', { description: `Ya puedes compartir la invitación de ${invitation.displayName}.` });
+    } catch {
+      notify.error('No se pudo copiar el enlace', { description: 'Inténtalo nuevamente.' });
+    }
+  };
+  const confirmedCount = invitation?.guests.filter((guest) => guest.attending === true).length ?? 0;
+  const pendingCount = invitation?.guests.filter((guest) => guest.attending === null).length ?? 0;
 
-	return (
-		<section className="w-full text-[0.9rem]" aria-labelledby="invitation-detail-title">
-			<div className="mb-3">
-				<ButtonLink variant="text" to="/invitaciones">← Volver a invitaciones</ButtonLink>
-			</div>
-			<PageHeader
-				eyebrow="Detalle de invitación"
-				title={invitation?.displayName ?? 'Invitación'}
-				titleId="invitation-detail-title"
-				description={invitation ? `ID de invitación: ${invitation.id}` : 'Consulta la información y las respuestas de tus invitados.'}
-				className="[overflow-wrap:anywhere]"
-			/>
-			{notice && state.status !== 'not-found' && <p role="status" className="mt-3 text-sm text-admin-green-700">{notice}</p>}
-
-			{state.status === 'loading' && (
-				<p role="status" className="mt-5 rounded-xl border border-dashed border-admin-border bg-surface px-4 py-10 text-center text-admin-muted">Cargando invitación...</p>
-			)}
-			{(state.status === 'not-found' || state.status === 'error') && (
-				<div role="alert" className="mt-5 rounded-xl border border-admin-border bg-surface p-5">
-					<h2 className="mt-0 mb-2 font-admin-serif text-lg font-medium">
-						{state.status === 'not-found' ? (notice || 'Invitación no encontrada') : 'No pudimos cargar la invitación.'}
-					</h2>
-					<p className="mt-0 text-admin-muted">
-						{state.status === 'not-found' ? 'No encontramos una invitación con este ID. Puedes volver al listado para buscarla.' : 'Inténtalo de nuevo o vuelve al listado de invitaciones.'}
-					</p>
-					{state.status === 'error' && (
-						<Button variant="secondary" type="button" onClick={() => {
-							setState({ status: 'loading' });
-							setAttempt((current) => current + 1);
-						}}>Reintentar</Button>
-					)}
-				</div>
-			)}
-
-			{invitation && (
-				<>
-					{idle && <div className="mt-3"><Button variant="secondary" type="button" onClick={() => { setNotice(''); setEditing(true); }}>Editar invitación</Button></div>}
-					{editing && <InvitationEditForm
-						invitation={invitation}
-						onCancel={() => setEditing(false)}
-						onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setEditing(false); notify.success('Cambios guardados', { description: 'La invitación se actualizó correctamente.' }); }}
-						onUnavailable={() => { setEditing(false); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
-						onReload={() => { setEditing(false); setNotice(''); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
-					/>}
-					<div className="mt-3 flex flex-wrap gap-2">
-						<InvitationStatusBadge status={invitation.rsvpStatus} />
-						{invitation.isArchived && <InvitationStatusBadge status="archived" />}
-					</div>
-					<dl className="my-5 grid grid-cols-2 gap-3 rounded-xl border border-admin-border bg-surface-soft p-4 min-[75rem]:grid-cols-4">
-						<DetailField label="Estado RSVP"><InvitationStatusBadge status={invitation.rsvpStatus} /></DetailField>
-						<DetailField label="Asisten"><strong>{invitation.guests.filter((guest) => guest.attending === true).length} de {invitation.maxGuests}</strong></DetailField>
-						<DetailField label="Capacidad">{invitation.maxGuests} {invitation.maxGuests === 1 ? 'invitado' : 'invitados'}
-							{idle && <Button className="mt-2 block text-xs" variant="secondary" type="button" onClick={() => { setNotice(''); setChangingCapacity(true); }}>Cambiar capacidad</Button>}
-						</DetailField>
-						<DetailField label="Reemplazos">{invitation.replacementsAllowed ? 'Permitidos' : 'No permitidos'}</DetailField>
-					</dl>
-					{changingCapacity && <InvitationCapacityForm
-						invitation={invitation}
-						onCancel={() => setChangingCapacity(false)}
-						onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setChangingCapacity(false); notify.success('Capacidad actualizada', { description: 'La capacidad de la invitación se guardó correctamente.' }); }}
-						onUnavailable={() => { setChangingCapacity(false); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
-						onReload={() => { setChangingCapacity(false); setNotice(''); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
-					/>}
-					<div className="grid items-start gap-4 min-[90rem]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-						<div className="grid min-w-0 gap-4">
-							<DetailCard title="Invitados">
-								<ol className="m-0 grid list-none gap-3 p-0">
-									{invitation.guests.map((guest, index) => (
-										<li key={index} className="min-w-0 rounded-lg border border-admin-border p-3 [overflow-wrap:anywhere]">
-											<div className="flex flex-wrap items-start justify-between gap-2">
-												<h3 className="m-0 min-w-0 font-semibold">{index + 1}. {guest.shortName}</h3>
-												<span className={`rounded-full px-2 py-1 text-xs font-semibold ${guest.attending === true ? 'bg-admin-green-100 text-admin-green-700' : guest.attending === false ? 'bg-[#f3e8e5] text-admin-danger' : 'bg-surface-soft text-admin-muted'}`}>
-													{guest.attending === true ? 'Asiste' : guest.attending === false ? 'No asiste' : 'Sin respuesta'}
-												</span>
-											</div>
-											<p className="mt-1 mb-2 text-admin-muted">{guest.name.trim() ? guest.name : 'Sin nombre asignado'}</p>
-											<p className="m-0 text-xs font-semibold text-admin-green-700">{guestLabels[guest.type]}</p>
-											{guest.type === 'replacement' && <p className="mt-2 mb-0 text-xs text-admin-muted">Invitado original: {guest.originalName || 'Nombre no disponible'}</p>}
-											{idle && guest.name.trim() !== '' && <div className="mt-3">
-												<Button variant="secondary" type="button" onClick={() => { setNotice(''); setEditingNameIndex(index); }}>Editar nombre</Button>
-											</div>}
-											{editingNameIndex === index && <EditInvitationGuestName
-												invitation={invitation}
-												guestIndex={index}
-												onCancel={() => setEditingNameIndex(null)}
-												onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setEditingNameIndex(null); notify.success('Nombre actualizado', { description: 'El nombre del invitado se guardó correctamente.' }); }}
-												onUnavailable={() => { setEditingNameIndex(null); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
-												onRefresh={(message) => { setEditingNameIndex(null); setNotice(message); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
-											/>}
-											{idle && guest.type === 'replacement' && <div className="mt-3">
-												<Button variant="secondary" type="button" onClick={() => { setNotice(''); setRestoringIndex(index); }}>Restaurar invitado original</Button>
-											</div>}
-											{restoringIndex === index && <RestoreInvitationReplacement
-												invitation={invitation}
-												guestIndex={index}
-												onCancel={() => setRestoringIndex(null)}
-												onRestored={(updated) => { setState({ status: 'success', invitation: updated }); setRestoringIndex(null); notify.success('Invitado original restaurado', { description: 'La respuesta de asistencia volvió a quedar pendiente.' }); }}
-												onUnavailable={() => { setRestoringIndex(null); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
-												onRefresh={(message) => { setRestoringIndex(null); setNotice(message); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
-											/>}
-											{idle && (guest.type === 'known' || guest.type === 'open') && (
-												<div className="mt-3">
-													<Button variant="secondary" type="button" disabled={invitation.maxGuests <= 1} onClick={() => { setNotice(''); setRemovingIndex(index); }}>Eliminar invitado</Button>
-													{invitation.maxGuests <= 1 && <p className="mt-2 mb-0 text-xs text-admin-muted">No se puede eliminar el último invitado.</p>}
-												</div>
-											)}
-											{removingIndex === index && <RemoveInvitationGuest
-												invitation={invitation}
-												guestIndex={index}
-												onCancel={() => setRemovingIndex(null)}
-												onRemoved={(updated) => { setState({ status: 'success', invitation: updated }); setRemovingIndex(null); notify.success('Invitado eliminado', { description: 'La capacidad de la invitación se actualizó correctamente.' }); }}
-												onUnavailable={() => { setRemovingIndex(null); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
-												onRefresh={(message) => { setRemovingIndex(null); setNotice(message); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
-											/>}
-										</li>
-									))}
-								</ol>
-							</DetailCard>
-							<DetailCard title="Información general">
-								<dl className="m-0 grid gap-4 sm:grid-cols-2">
-									<DetailField label="Nombre">{invitation.displayName}</DetailField>
-									<DetailField label="ID">{invitation.id}</DetailField>
-									<DetailField label="Capacidad">{invitation.maxGuests}</DetailField>
-									<DetailField label="Reemplazos">{invitation.replacementsAllowed ? 'Permitidos' : 'No permitidos'}</DetailField>
-									<DetailField label="Mensaje"><span className="whitespace-pre-wrap">{invitation.message || 'Sin mensaje'}</span></DetailField>
-								</dl>
-							</DetailCard>
-						</div>
-						<div className="grid min-w-0 gap-4">
-							<DetailCard title="Configuración RSVP">
-								<dl className="m-0 grid gap-4">
-									<DetailField label="Reemplazos permitidos">{invitation.replacementsAllowed ? 'Sí' : 'No'}</DetailField>
-								</dl>
-								<EditInvitationOverride
-									key={`${invitation.version}-${overrideAction}`}
-									invitation={invitation} action={overrideAction} idle={idle}
-									onSelect={(action) => { setNotice(''); setOverrideAction(action); }}
-									onCancel={() => setOverrideAction(null)}
-									onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setOverrideAction(null); notify.success(updated.editOverrideUntil === null ? 'Permiso revocado' : 'Permiso actualizado', { description: 'El permiso extraordinario RSVP se guardó correctamente.' }); }}
-									onUnavailable={() => { setOverrideAction(null); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
-									onRefresh={(message) => { setOverrideAction(null); setNotice(message); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
-								/>
-							</DetailCard>
-							<DetailCard title="Archivo">
-								<dl className="m-0 grid gap-4">
-									<DetailField label="Estado"><InvitationStatusBadge status={invitation.isArchived ? 'archived' : 'active'} /></DetailField>
-									{invitation.isArchived && <DetailField label="Fecha de archivo">{formatDate(invitation.archivedAt, 'Archivada — fecha no disponible')}</DetailField>}
-								</dl>
-								{idle && <Button className="mt-4" variant="secondary" type="button" onClick={() => { setNotice(''); setChangingArchive(true); }}>{invitation.isArchived ? 'Restaurar invitación' : 'Archivar invitación'}</Button>}
-								{changingArchive && <InvitationArchiveConfirmation
-									invitation={invitation}
-									onCancel={() => setChangingArchive(false)}
-									onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setChangingArchive(false); }}
-									onUnavailable={() => { setChangingArchive(false); setNotice('Esta invitación ya no está disponible.'); setState({ status: 'not-found' }); }}
-									onRefresh={(message) => { setChangingArchive(false); setNotice(message); setState({ status: 'loading' }); setAttempt((current) => current + 1); }}
-								/>}
-							</DetailCard>
-							<DetailCard title="Fechas">
-								<dl className="m-0 grid gap-4">
-									<DetailField label="Última actualización">{formatDate(invitation.updatedAt)}</DetailField>
-								</dl>
-								<p className="mt-4 mb-0 text-xs text-admin-muted">Todas las fechas se muestran en horario de Cancún (America/Cancun).</p>
-							</DetailCard>
-						</div>
-					</div>
-				</>
-			)}
-		</section>
-	);
+  return <section className="invitation-detail" aria-labelledby="invitation-detail-title">
+    <ButtonLink variant="text" to="/invitaciones" className="invitation-detail__back">← Volver a invitaciones</ButtonLink>
+    <header className="invitation-detail__header"><div><p className="invitation-detail__eyebrow">Gestión de invitaciones</p><h1 id="invitation-detail-title">Detalles de la invitación</h1><p className="invitation-detail__description">Consulta las respuestas y ajusta la información de esta invitación.</p></div>{invitation && <div className="invitation-detail__header-actions"><InvitationStatusBadge status={invitation.rsvpStatus} />{!invitation.isArchived && <Button variant="secondary" type="button" onClick={() => void copyLink()}>Copiar enlace</Button>}</div>}</header>
+    {notice && state.status !== 'not-found' && <p role="status" className="invitation-detail__notice">{notice}</p>}
+    {state.status === 'loading' && <p role="status" className="invitation-detail__feedback">Cargando invitación...</p>}
+    {(state.status === 'not-found' || state.status === 'error') && <div role="alert" className="invitation-detail__feedback">
+      <h2>{state.status === 'not-found' ? (notice || 'Invitación no encontrada') : 'No pudimos cargar la invitación.'}</h2>
+      <p>{state.status === 'not-found' ? 'No encontramos una invitación con este ID. Puedes volver al listado para buscarla.' : 'Inténtalo de nuevo o vuelve al listado de invitaciones.'}</p>
+      {state.status === 'error' && <Button variant="secondary" type="button" onClick={() => reload()}>Reintentar</Button>}
+    </div>}
+    {invitation && <>
+      <div className="invitation-detail__overview" aria-label="Resumen de la invitación">
+        <div><span>Lugares</span><strong>{invitation.maxGuests}</strong><small>Capacidad total</small></div>
+        <div><span>Confirmados</span><strong>{confirmedCount}</strong><small>Asistirán</small></div>
+        <div><span>Pendientes</span><strong>{pendingCount}</strong><small>Sin respuesta</small></div>
+      </div>
+      <DetailSection title={`Personas (${invitation.guests.length})`} icon="people" description="Asistencia y lugares de esta invitación" action={<div className="invitation-detail__places">
+        <span>{invitation.maxGuests} {invitation.maxGuests === 1 ? 'lugar' : 'lugares'}</span>
+        {idle && <><span aria-hidden="true">·</span><TextAction onClick={() => { setNotice(''); setChangingCapacity(true); }}>Ajustar lugares</TextAction></>}
+      </div>}>
+        {changingCapacity && <InvitationCapacityForm invitation={invitation} onCancel={() => setChangingCapacity(false)} onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setChangingCapacity(false); notify.success('Lugares actualizados'); }} onUnavailable={() => { setChangingCapacity(false); unavailable(); }} onReload={() => { setChangingCapacity(false); reload(); }} />}
+        <ol className="invitation-detail__people">
+          {invitation.guests.map((guest, index) => {
+            const canEdit = guest.name.trim() !== '';
+            const canRemove = guest.type === 'known' || guest.type === 'open';
+            return <li key={index} className="invitation-detail__person">
+              <span className="invitation-detail__person-number">{index + 1}</span>
+              <div className="invitation-detail__person-info"><h3>{guest.name.trim() || guest.shortName || 'Acompañante'}</h3><p>{guestLabels[guest.type]}</p>
+                {guest.type === 'replacement' && <p>Invitado original: {guest.originalName || 'Nombre no disponible'}</p>}
+              </div>
+              <span className={`invitation-detail__person-status ${guest.attending === true ? 'is-attending' : guest.attending === false ? 'is-declined' : 'is-pending'}`}>
+                {guest.attending === true ? 'Asiste' : guest.attending === false ? 'No asiste' : 'Sin respuesta'}
+              </span>
+              {idle && (canEdit || canRemove || guest.type === 'replacement') && <div className="invitation-detail__menu-wrap">
+                <button type="button" className="invitation-detail__menu-trigger" aria-label={`Acciones para ${guest.name.trim() || guest.shortName || `persona ${index + 1}`}`} aria-expanded={openMenuIndex === index} onClick={() => setOpenMenuIndex(openMenuIndex === index ? null : index)}>⋮</button>
+                {openMenuIndex === index && <div className="invitation-detail__menu">
+                  {canEdit && <button type="button" onClick={() => { setOpenMenuIndex(null); setNotice(''); setEditingNameIndex(index); }}>Editar nombre</button>}
+                  {guest.type === 'replacement' && <button type="button" onClick={() => { setOpenMenuIndex(null); setNotice(''); setRestoringIndex(index); }}>Restaurar invitado original</button>}
+                  {canRemove && <button type="button" disabled={invitation.maxGuests <= 1} title={invitation.maxGuests <= 1 ? 'No se puede eliminar el último invitado.' : undefined} onClick={() => { setOpenMenuIndex(null); setNotice(''); setRemovingIndex(index); }}>Eliminar invitado</button>}
+                  {canRemove && invitation.maxGuests <= 1 && <p>No se puede eliminar el último invitado.</p>}
+                </div>}
+              </div>}
+              {editingNameIndex === index && <div className="invitation-detail__person-form"><EditInvitationGuestName invitation={invitation} guestIndex={index} onCancel={() => setEditingNameIndex(null)} onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setEditingNameIndex(null); notify.success('Nombre actualizado'); }} onUnavailable={() => { setEditingNameIndex(null); unavailable(); }} onRefresh={(message) => { setEditingNameIndex(null); reload(message); }} /></div>}
+              {restoringIndex === index && <div className="invitation-detail__person-form"><RestoreInvitationReplacement invitation={invitation} guestIndex={index} onCancel={() => setRestoringIndex(null)} onRestored={(updated) => { setState({ status: 'success', invitation: updated }); setRestoringIndex(null); notify.success('Invitado original restaurado'); }} onUnavailable={() => { setRestoringIndex(null); unavailable(); }} onRefresh={(message) => { setRestoringIndex(null); reload(message); }} /></div>}
+              {removingIndex === index && <div className="invitation-detail__person-form"><RemoveInvitationGuest invitation={invitation} guestIndex={index} onCancel={() => setRemovingIndex(null)} onRemoved={(updated) => { setState({ status: 'success', invitation: updated }); setRemovingIndex(null); notify.success('Invitado eliminado'); }} onUnavailable={() => { setRemovingIndex(null); unavailable(); }} onRefresh={(message) => { setRemovingIndex(null); reload(message); }} /></div>}
+            </li>;
+          })}
+        </ol>
+      </DetailSection>
+      <DetailSection title="Datos de la invitación" icon="invitation" description="Información que identifica y acompaña esta invitación">
+        <dl className="invitation-detail__data">
+          <DetailRow label="Nombre" action={idle && <TextAction onClick={() => { setNotice(''); setEditing('name'); }}>Editar nombre</TextAction>}>{invitation.displayName}</DetailRow>
+          <DetailRow label="Código">{invitation.id}</DetailRow>
+          <DetailRow label="Mensaje"><span className="whitespace-pre-wrap">{invitation.message || 'Sin mensaje'}</span></DetailRow>
+          <DetailRow label="Sustituciones" action={idle && <TextAction onClick={() => { setNotice(''); setEditing('replacements'); }}>Cambiar</TextAction>}>{invitation.replacementsAllowed ? 'Permitidas' : 'No permitidas'}</DetailRow>
+        </dl>
+        {editing && <InvitationEditForm key={editing} invitation={invitation} field={editing} onCancel={() => setEditing(null)} onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setEditing(null); notify.success('Cambios guardados'); }} onUnavailable={() => { setEditing(null); unavailable(); }} onReload={() => { setEditing(null); reload(); }} />}
+      </DetailSection>
+      <DetailSection title="Administración" icon="settings" description="Permisos, estado y actividad reciente">
+        <EditInvitationOverride key={`${invitation.version}-${overrideAction}`} invitation={invitation} action={overrideAction} idle={idle} onSelect={(action) => { setNotice(''); setOverrideAction(action); }} onCancel={() => setOverrideAction(null)} onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setOverrideAction(null); notify.success(updated.editOverrideUntil === null ? 'Permiso revocado' : 'Permiso actualizado'); }} onUnavailable={() => { setOverrideAction(null); unavailable(); }} onRefresh={(message) => { setOverrideAction(null); reload(message); }} />
+        <dl className="invitation-detail__data">
+          <DetailRow label="Estado"><InvitationStatusBadge status={invitation.isArchived ? 'archived' : 'active'} /></DetailRow>
+          {invitation.isArchived && <DetailRow label="Fecha de archivo">{formatDate(invitation.archivedAt)}</DetailRow>}
+          <DetailRow label="Última actualización">{formatDate(invitation.updatedAt)}</DetailRow>
+        </dl>
+        {idle && <div className="invitation-detail__archive"><Button variant="secondary" type="button" className={invitation.isArchived ? '' : 'text-admin-danger'} onClick={() => { setNotice(''); setChangingArchive(true); }}>{invitation.isArchived ? 'Restaurar invitación' : 'Archivar invitación'}</Button></div>}
+        {changingArchive && <InvitationArchiveConfirmation invitation={invitation} onCancel={() => setChangingArchive(false)} onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setChangingArchive(false); }} onUnavailable={() => { setChangingArchive(false); unavailable(); }} onRefresh={(message) => { setChangingArchive(false); reload(message); }} />}
+      </DetailSection>
+    </>}
+  </section>;
 }

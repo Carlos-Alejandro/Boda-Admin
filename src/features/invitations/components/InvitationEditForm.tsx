@@ -7,13 +7,14 @@ import type { Invitation, UpdateInvitationInput } from '../model/invitation.type
 
 interface InvitationEditFormProps {
 	invitation: Invitation;
+	field: 'name' | 'replacements';
 	onCancel: () => void;
 	onSaved: (invitation: Invitation) => void;
 	onUnavailable: () => void;
 	onReload: () => void;
 }
 
-export function InvitationEditForm({ invitation, onCancel, onSaved, onUnavailable, onReload }: InvitationEditFormProps) {
+export function InvitationEditForm({ invitation, field, onCancel, onSaved, onUnavailable, onReload }: InvitationEditFormProps) {
 	const [displayName, setDisplayName] = useState(invitation.displayName);
 	const [replacementsAllowed, setReplacementsAllowed] = useState(invitation.replacementsAllowed);
 	const [saving, setSaving] = useState(false);
@@ -24,11 +25,11 @@ export function InvitationEditForm({ invitation, onCancel, onSaved, onUnavailabl
 	const mounted = useRef(false);
 	const nameInput = useRef<HTMLInputElement>(null);
 	const trimmedName = displayName.trim();
-	const changed = trimmedName !== invitation.displayName.trim() || replacementsAllowed !== invitation.replacementsAllowed;
+	const changed = field === 'name' ? trimmedName !== invitation.displayName.trim() : replacementsAllowed !== invitation.replacementsAllowed;
 
 	useEffect(() => {
 		mounted.current = true;
-		nameInput.current?.focus();
+		if (field === 'name') nameInput.current?.focus();
 		const preventUnload = (event: BeforeUnloadEvent) => {
 			if (submitting.current) {
 				event.preventDefault();
@@ -49,13 +50,13 @@ export function InvitationEditForm({ invitation, onCancel, onSaved, onUnavailabl
 			window.removeEventListener('beforeunload', preventUnload);
 			document.removeEventListener('click', preventNavigation, true);
 		};
-	}, []);
+	}, [field]);
 
 	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		if (submitting.current || uncertain) return;
 		setError('');
-		if (!trimmedName) {
+		if (field === 'name' && !trimmedName) {
 			setNameError('Ingresa el nombre de la invitación.');
 			nameInput.current?.focus();
 			return;
@@ -63,8 +64,8 @@ export function InvitationEditForm({ invitation, onCancel, onSaved, onUnavailabl
 		setNameError('');
 		if (!changed) return;
 		const payload: UpdateInvitationInput = {};
-		if (trimmedName !== invitation.displayName.trim()) payload.displayName = trimmedName;
-		if (replacementsAllowed !== invitation.replacementsAllowed) payload.replacementsAllowed = replacementsAllowed;
+		if (field === 'name') payload.displayName = trimmedName;
+		if (field === 'replacements') payload.replacementsAllowed = replacementsAllowed;
 		submitting.current = true;
 		setSaving(true);
 		try {
@@ -90,18 +91,20 @@ export function InvitationEditForm({ invitation, onCancel, onSaved, onUnavailabl
 
 	return (
 		<form onSubmit={handleSubmit} noValidate aria-labelledby="edit-invitation-title" aria-describedby={error ? 'edit-invitation-error' : undefined} aria-busy={saving} className="mt-4 rounded-xl border border-admin-border bg-surface p-4 sm:p-5">
-			<h2 id="edit-invitation-title" className="mt-0 mb-4 font-admin-serif text-[1.1rem] font-medium">Editar invitación</h2>
+			<h2 id="edit-invitation-title" className="mt-0 mb-4 font-admin-serif text-[1.1rem] font-medium">{field === 'name' ? 'Editar nombre' : 'Cambiar sustituciones'}</h2>
 			<fieldset disabled={saving || uncertain} className="m-0 grid min-w-0 gap-4 border-0 p-0">
+				{field === 'name' ? <>
 				<label className="grid gap-1.5 text-sm font-semibold" htmlFor="edit-display-name">
 					Nombre de la invitación
 					<input ref={nameInput} id="edit-display-name" type="text" required value={displayName} onChange={(event) => { setDisplayName(event.target.value); setNameError(''); }} aria-invalid={Boolean(nameError)} aria-describedby={nameError ? 'edit-name-error' : undefined} className="min-h-10 w-full rounded-lg border border-admin-border bg-white px-3 py-2 text-base font-normal sm:text-sm" />
 				</label>
 				{nameError && <p id="edit-name-error" role="alert" className="m-0 text-sm text-admin-danger">{nameError}</p>}
-				<label className="flex items-center gap-2 text-sm font-semibold">
+				</> : <><label className="flex items-center gap-2 text-sm font-semibold">
 					<input type="checkbox" checked={replacementsAllowed} onChange={(event) => setReplacementsAllowed(event.target.checked)} aria-describedby="edit-replacements-help" className="h-4 w-4 accent-admin-green-700" />
-					Permitir reemplazos
+					Permitir sustituciones
 				</label>
 				<p id="edit-replacements-help" className="m-0 text-xs text-admin-muted">Permite sustituir a un invitado que no asistirá. No modifica los invitados existentes.</p>
+				</>}
 			</fieldset>
 			{error && <p id="edit-invitation-error" role="alert" className="mt-4 mb-0 text-sm text-admin-danger">{error}</p>}
 			{saving && <p role="status" className="mt-3 mb-0 text-xs text-admin-muted">Guardando cambios. Espera antes de salir de la invitación.</p>}

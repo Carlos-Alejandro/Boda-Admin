@@ -98,16 +98,21 @@ export function EditInvitationOverride({ invitation, action, idle, onSelect, onC
 		}
 	};
 
-	return <section className="mt-4 border-t border-admin-border pt-4" aria-labelledby="override-title">
-		<h3 id="override-title" className="mt-0 mb-2 text-sm font-semibold">Edición extraordinaria</h3>
-		<p className="m-0 text-sm text-admin-muted">{!existing ? 'Sin permiso extraordinario' : expired ? 'Permiso expirado' : invitation.isArchived ? 'Permiso sin efecto mientras está archivada' : 'Permiso vigente'}</p>
-		{existing && <p className="mt-1 mb-0 text-sm">{expired ? 'Expiró: ' : 'Hasta: '}{formatCancunDate(existing)}</p>}
-		<p className="mt-1 mb-0 text-xs text-admin-muted">Horario de Cancún (America/Cancun).</p>
-		{invitation.isArchived && <p className="mt-2 mb-0 text-xs text-admin-muted">Restaura la invitación antes de conceder o modificar el permiso.</p>}
-		{idle && <div className="mt-3 flex flex-wrap gap-2">
-			{!invitation.isArchived && <Button variant="secondary" type="button" onClick={() => onSelect('edit')}>{!existing ? 'Conceder permiso' : expired ? 'Conceder nuevo permiso' : 'Modificar'}</Button>}
-			{existing !== null && <Button variant="secondary" type="button" onClick={() => onSelect('revoke')}>Revocar</Button>}
-		</div>}
+	return <div className="invitation-detail__override">
+		<dl className="invitation-detail__data">
+		<div className="invitation-detail__data-row">
+			<dt>Edición extraordinaria</dt>
+			<dd>
+				<span>{!existing ? 'Sin permiso' : expired ? 'Permiso expirado' : invitation.isArchived ? 'Permiso sin efecto mientras está archivada' : 'Permiso vigente'}</span>
+				{existing && <span className="invitation-detail__subvalue">{expired ? 'Expiró: ' : 'Hasta: '}{formatCancunDate(existing)}</span>}
+				{invitation.isArchived && <span className="invitation-detail__subvalue">Restaura la invitación antes de conceder o modificar el permiso.</span>}
+			</dd>
+			{idle && <div className="invitation-detail__row-action invitation-detail__override-actions">
+				{!invitation.isArchived && <button className="invitation-detail__text-action" type="button" onClick={() => onSelect('edit')}>{!existing ? 'Conceder permiso' : expired ? 'Conceder nuevo permiso' : 'Modificar'}</button>}
+				{existing !== null && <button className="invitation-detail__text-action" type="button" onClick={() => onSelect('revoke')}>Revocar</button>}
+			</div>}
+		</div>
+		</dl>
 		{action && <form onSubmit={submit} noValidate aria-busy={saving} className="mt-3 rounded-lg border border-admin-border bg-surface-soft p-3">
 			{revoking ? <>
 				<h4 ref={title} tabIndex={-1} className="mt-0 mb-2 font-admin-serif text-base">Revocar permiso extraordinario</h4>
@@ -125,5 +130,5 @@ export function EditInvitationOverride({ invitation, action, idle, onSelect, onC
 				<Button variant="primary" type="submit" disabled={saving || submitted || !allowed || (!revoking && (Boolean(validation) || unchanged))}>{revoking ? 'Confirmar revocación' : 'Guardar'}</Button>
 			</div>
 		</form>}
-	</section>;
+	</div>;
 }
