@@ -13,6 +13,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
 	const [user, setUser] = useState<User | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [signingOut, setSigningOut] = useState(false);
 
 	useEffect(() => {
 		return onAuthStateChanged(auth, (currentUser) => {
@@ -25,12 +26,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
 		<AuthContext.Provider
 			value={{
 				user,
-				loading,
+				loading: loading || signingOut,
+				signingOut,
 				login: async () => {
 					await loginWithGoogle();
 				},
 				logout: async () => {
-					await logoutFromFirebase();
+					setSigningOut(true);
+					try {
+						await logoutFromFirebase();
+						setUser(null);
+					} finally {
+						setSigningOut(false);
+					}
 				},
 			}}
 		>

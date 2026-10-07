@@ -1,26 +1,33 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import type { User } from 'firebase/auth';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AuthContext } from '../../../auth/AuthContext';
 import { AdminLayout } from '../../../layouts/AdminLayout/AdminLayout';
+import { notify } from '../../notifications/notify';
 
 let mobile = false;
 let mediaChange: (() => void) | undefined;
+const logout = vi.fn<() => Promise<void>>();
+const accountUser = { displayName: 'María Pérez', email: 'maria@example.com' } as User;
 
 function mount(path = '/') {
 	return render(
-		<MemoryRouter initialEntries={[path]}>
-			<Routes>
-				<Route element={<AdminLayout />}>
-					<Route path="/" element={<p>Dashboard actual</p>} />
-					<Route path="/invitaciones" element={<p>Listado actual</p>} />
-					<Route path="/invitaciones/nueva" element={<p>Formulario actual</p>} />
-					<Route path="/invitaciones/importar" element={<p>Importador actual</p>} />
-					<Route path="/invitaciones/:id" element={<p>Detalle actual</p>} />
-				</Route>
-			</Routes>
-		</MemoryRouter>,
+		<AuthContext.Provider value={{ user: accountUser, loading: false, signingOut: false, login: vi.fn(), logout }}>
+			<MemoryRouter initialEntries={[path]}>
+				<Routes>
+					<Route element={<AdminLayout />}>
+						<Route path="/" element={<p>Dashboard actual</p>} />
+						<Route path="/invitaciones" element={<p>Listado actual</p>} />
+						<Route path="/invitaciones/nueva" element={<p>Formulario actual</p>} />
+						<Route path="/invitaciones/importar" element={<p>Importador actual</p>} />
+						<Route path="/invitaciones/:id" element={<p>Detalle actual</p>} />
+					</Route>
+				</Routes>
+			</MemoryRouter>
+		</AuthContext.Provider>,
 	);
 }
 
@@ -34,6 +41,7 @@ describe('navegación responsive del Admin', () => {
 	beforeEach(() => {
 		mobile = false;
 		mediaChange = undefined;
+		logout.mockReset().mockResolvedValue(undefined);
 		vi.stubGlobal('matchMedia', vi.fn().mockImplementation(() => ({
 			get matches() { return mobile; },
 			addEventListener: (_type: string, listener: () => void) => { mediaChange = listener; },
@@ -55,6 +63,20 @@ describe('navegación responsive del Admin', () => {
 		expect(within(nav).getByRole('link', { name: 'Dashboard' }).getAttribute('href')).toBe('/');
 		expect(within(nav).getByRole('link', { name: 'Todas' }).className).toContain('admin-sidebar__link--active');
 		expect(screen.getByRole('main').textContent).toContain('Listado actual');
+	});
+
+	it('muestra la cuenta de Firebase y ejecuta cerrar sesión desde el menú discreto', () => {
+		const dismissNotifications = vi.spyOn(notify, 'dismiss');
+		mount();
+		expect(screen.getByText('María Pérez')).toBeTruthy();
+		expect(screen.getByText('maria@example.com')).toBeTruthy();
+		expect(screen.queryByRole('button', { name: 'Cerrar sesión' })).toBeNull();
+		fireEvent.click(screen.getByRole('button', { name: 'Cuenta de María Pérez' }));
+		expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeTruthy();
+		fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
+		expect(logout).toHaveBeenCalledOnce();
+		expect(dismissNotifications).toHaveBeenCalledOnce();
+		dismissNotifications.mockRestore();
 	});
 
 	it.each(['Boda-Admin', 'B'])('navega al Dashboard desde %s en el branding desktop', (target) => {

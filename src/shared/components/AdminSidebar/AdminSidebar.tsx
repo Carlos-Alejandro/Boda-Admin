@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 
+import { useAuth } from '../../../auth/useAuth';
+import { notify } from '../../notifications/notify';
 import './AdminSidebar.css';
 
 const navigationClassName = ({ isActive }: { isActive: boolean }) =>
@@ -22,16 +24,26 @@ function ChevronIcon({ expanded }: { expanded: boolean }) {
 	return <svg className={`admin-sidebar__chevron${expanded ? ' admin-sidebar__chevron--expanded' : ''}`} viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5" /></svg>;
 }
 
+function AccountChevron({ expanded }: { expanded: boolean }) {
+	return <svg className={`admin-sidebar__account-chevron${expanded ? ' admin-sidebar__account-chevron--expanded' : ''}`} viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5" /></svg>;
+}
+
 const mobileNavigationQuery = '(max-width: 56.25rem)';
 
 export function AdminSidebar() {
 	const location = useLocation();
+	const { user, logout, signingOut } = useAuth();
 	const [isMobile, setIsMobile] = useState(() => window.matchMedia?.(mobileNavigationQuery).matches ?? false);
+	const [accountMenuState, setAccountMenuState] = useState({ route: location.key, open: false });
 	const [drawerState, setDrawerState] = useState({ route: location.key, open: false });
 	const isDrawerOpen = isMobile && drawerState.route === location.key && drawerState.open;
 	const openButtonRef = useRef<HTMLButtonElement>(null);
 	const closeButtonRef = useRef<HTMLButtonElement>(null);
 	const drawerRef = useRef<HTMLElement>(null);
+	const accountRef = useRef<HTMLDivElement>(null);
+	const accountTriggerRef = useRef<HTMLButtonElement>(null);
+	const accountMenuOpen = accountMenuState.route === location.key && accountMenuState.open;
+	const setAccountMenuOpen = useCallback((open: boolean) => setAccountMenuState({ route: location.key, open }), [location.key]);
 	const invitationRouteActive = location.pathname.startsWith('/invitaciones');
 	const invitationDetailActive = invitationRouteActive && location.pathname !== '/invitaciones' && location.pathname !== '/invitaciones/nueva' && location.pathname !== '/invitaciones/importar';
 	const [navigationState, setNavigationState] = useState({ route: location.pathname, expanded: invitationRouteActive });
@@ -40,6 +52,40 @@ export function AdminSidebar() {
 		setDrawerState((state) => ({ ...state, open: false }));
 		if (isDrawerOpen) openButtonRef.current?.focus();
 	}, [isDrawerOpen]);
+	const accountLabel = user?.displayName?.trim() || user?.email?.trim() || 'Cuenta';
+	const accountEmail = user?.displayName?.trim() ? user.email : null;
+	const accountInitial = user?.displayName?.trim()?.[0] || user?.email?.trim()?.[0];
+	const isLoggingOut = signingOut;
+
+	const handleLogout = async () => {
+		if (isLoggingOut) return;
+		setAccountMenuOpen(false);
+		notify.dismiss();
+		try {
+			await logout();
+		} catch {
+			notify.error('No se pudo cerrar sesión', { description: 'Inténtalo de nuevo.' });
+		}
+	};
+
+	useEffect(() => {
+		if (!accountMenuOpen) return;
+		const closeOnOutsidePointer = (event: PointerEvent) => {
+			if (!accountRef.current?.contains(event.target as Node)) setAccountMenuOpen(false);
+		};
+		const closeOnEscape = (event: KeyboardEvent) => {
+			if (event.key !== 'Escape') return;
+			event.preventDefault();
+			setAccountMenuOpen(false);
+			accountTriggerRef.current?.focus();
+		};
+		document.addEventListener('pointerdown', closeOnOutsidePointer);
+		document.addEventListener('keydown', closeOnEscape);
+		return () => {
+			document.removeEventListener('pointerdown', closeOnOutsidePointer);
+			document.removeEventListener('keydown', closeOnEscape);
+		};
+	}, [accountMenuOpen, setAccountMenuOpen]);
 
 	useEffect(() => {
 		const media = window.matchMedia?.(mobileNavigationQuery);
@@ -152,8 +198,33 @@ export function AdminSidebar() {
 			</nav>
 
 			<div className="admin-sidebar__footer">
-				<span className="admin-sidebar__footer-icon"><PeopleIcon /></span>
-				<p>Gestión de invitaciones<br />y confirmaciones</p>
+				<div ref={accountRef} className="admin-sidebar__account">
+					<button
+						ref={accountTriggerRef}
+						className="admin-sidebar__account-trigger"
+						type="button"
+						aria-label={`Cuenta de ${accountLabel}`}
+						aria-expanded={accountMenuOpen}
+						aria-controls="admin-sidebar-account-menu"
+						disabled={isLoggingOut}
+						onClick={() => setAccountMenuOpen(!accountMenuOpen)}
+					>
+						<span className="admin-sidebar__account-avatar" aria-hidden="true">
+							{accountInitial ? accountInitial.toLocaleUpperCase() : <PeopleIcon />}
+						</span>
+						<span className="admin-sidebar__account-copy">
+							<strong>{accountLabel}</strong>
+							{accountEmail && <small>{accountEmail}</small>}
+						</span>
+						<AccountChevron expanded={accountMenuOpen} />
+					</button>
+					{accountMenuOpen && <div id="admin-sidebar-account-menu" className="admin-sidebar__account-menu">
+						<button className="admin-sidebar__account-logout" type="button" disabled={isLoggingOut} onClick={() => { void handleLogout(); }}>
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5.5A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20H10M14 16l4-4-4-4M18 12H9" /></svg>
+							{isLoggingOut ? 'Cerrando sesión...' : 'Cerrar sesión'}
+						</button>
+					</div>}
+				</div>
 			</div>
 			</aside>
 		</>

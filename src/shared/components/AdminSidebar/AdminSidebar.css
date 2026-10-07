@@ -218,19 +218,91 @@
 .admin-sidebar__link--active .admin-sidebar__subnav-dot { background-color: #e0bc6e; }
 
 .admin-sidebar__footer {
-	display: flex;
-	align-items: center;
 	box-sizing: border-box;
-	min-height: clamp(5rem, 12.5vh, 8.5rem);
-	gap: .75rem;
 	margin: auto clamp(1rem, 1.3vw, 1.4rem) 0;
-	padding: 1.25rem .35rem 1.7rem;
+	padding: .8rem .05rem 1rem;
 	border-top: 1px solid rgba(232, 215, 180, .14);
-	color: #e0bc6e;
 }
 
-.admin-sidebar__footer-icon { display: grid; width: 1.55rem; height: 1.55rem; flex: 0 0 1.55rem; place-items: center; }
-.admin-sidebar__footer p { margin: 0; font-family: var(--font-admin-serif); font-size: .775rem; font-weight: 400; line-height: 1.5; }
+.admin-sidebar__account { position: relative; min-width: 0; }
+.admin-sidebar__account-trigger {
+	display: flex;
+	width: 100%;
+	min-width: 0;
+	align-items: center;
+	gap: .7rem;
+	padding: .45rem .4rem;
+	border: 1px solid transparent;
+	border-radius: .55rem;
+	background: transparent;
+	color: #f9f4e9;
+	text-align: left;
+	cursor: pointer;
+	transition: background-color .18s ease, border-color .18s ease;
+}
+.admin-sidebar__account-trigger:hover,
+.admin-sidebar__account-trigger[aria-expanded="true"] {
+	border-color: rgba(232, 215, 180, .13);
+	background: rgba(255, 255, 255, .055);
+}
+.admin-sidebar__account-trigger:focus-visible,
+.admin-sidebar__account-logout:focus-visible {
+	outline: 2px solid rgba(231, 201, 139, .92);
+	outline-offset: 2px;
+}
+.admin-sidebar__account-trigger:disabled { cursor: wait; opacity: .7; }
+.admin-sidebar__account-avatar {
+	display: grid;
+	width: 2.15rem;
+	height: 2.15rem;
+	flex: 0 0 2.15rem;
+	place-items: center;
+	border: 1px solid rgba(231, 201, 139, .38);
+	border-radius: 50%;
+	background: rgba(231, 201, 139, .1);
+	color: #f0d99e;
+	font-size: .88rem;
+	font-weight: 700;
+}
+.admin-sidebar__account-avatar svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.45; }
+.admin-sidebar__account-copy { display: grid; min-width: 0; flex: 1; gap: .08rem; }
+.admin-sidebar__account-copy strong,
+.admin-sidebar__account-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-sidebar__account-copy strong { color: #fffdf8; font-size: .8rem; font-weight: 600; }
+.admin-sidebar__account-copy small { color: rgba(255, 253, 248, .62); font-size: .68rem; }
+.admin-sidebar__account-chevron { width: 1rem; height: 1rem; flex: 0 0 1rem; fill: none; stroke: rgba(231, 201, 139, .8); stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; transition: transform .18s ease; }
+.admin-sidebar__account-chevron--expanded { transform: rotate(180deg); }
+.admin-sidebar__account-menu {
+	position: absolute;
+	right: 0;
+	bottom: calc(100% + .45rem);
+	left: 0;
+	z-index: 5;
+	padding: .3rem;
+	border: 1px solid rgba(232, 215, 180, .18);
+	border-radius: .55rem;
+	background: #0b3327;
+	box-shadow: 0 .65rem 1.5rem rgba(0, 0, 0, .23);
+}
+.admin-sidebar__account-logout {
+	display: flex;
+	width: 100%;
+	min-height: 2.7rem;
+	align-items: center;
+	gap: .65rem;
+	padding: .55rem .65rem;
+	border: 0;
+	border-radius: .35rem;
+	background: transparent;
+	color: rgba(255, 253, 248, .88);
+	font: inherit;
+	font-size: .82rem;
+	text-align: left;
+	cursor: pointer;
+}
+.admin-sidebar__account-logout:hover:not(:disabled) { background: rgba(255, 255, 255, .07); color: #fffdf8; }
+.admin-sidebar__account-logout:disabled { cursor: wait; opacity: .65; }
+.admin-sidebar__account-logout svg { width: 1.1rem; height: 1.1rem; flex: 0 0 1.1rem; fill: none; stroke: #dfc27e; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.65; }
 
 .admin-mobile-topbar,
 .admin-mobile-overlay,
