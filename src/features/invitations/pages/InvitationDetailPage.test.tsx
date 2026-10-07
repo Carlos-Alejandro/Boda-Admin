@@ -6,6 +6,8 @@ import { changeInvitationCapacity, getInvitationById, removeInvitationGuest, upd
 import type { Invitation } from '../model/invitation.types';
 import { InvitationDetailPage } from './InvitationDetailPage';
 
+vi.hoisted(() => { vi.stubEnv('VITE_API_BASE_URL', 'https://api.test'); });
+vi.mock('../../../config/firebase', () => ({ auth: { currentUser: null } }));
 vi.mock('../api/invitationService', () => ({
   getInvitationById: vi.fn(), updateInvitation: vi.fn(), changeInvitationCapacity: vi.fn(),
   updateInvitationEditOverride: vi.fn(), updateInvitationGuestName: vi.fn(),

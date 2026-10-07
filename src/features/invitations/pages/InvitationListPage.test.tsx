@@ -8,7 +8,11 @@ import { archiveInvitation, getInvitations, restoreInvitation } from '../api/inv
 import type { Guest, Invitation } from '../model/invitation.types';
 import { InvitationListPage } from './InvitationListPage';
 
-vi.hoisted(() => { vi.stubEnv('VITE_PUBLIC_INVITATION_BASE_URL', 'https://public.test'); });
+vi.hoisted(() => {
+	vi.stubEnv('VITE_PUBLIC_INVITATION_BASE_URL', 'https://public.test');
+	vi.stubEnv('VITE_API_BASE_URL', 'https://api.test');
+});
+vi.mock('../../../config/firebase', () => ({ auth: { currentUser: null } }));
 vi.mock('../api/invitationService', () => ({
 	getInvitations: vi.fn(),
 	archiveInvitation: vi.fn(),

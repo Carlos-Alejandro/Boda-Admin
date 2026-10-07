@@ -164,12 +164,20 @@ describe('navegación responsive del Admin', () => {
 		mount('/invitaciones');
 		const drawer = openDrawer();
 		const first = within(drawer).getByRole('link', { name: /Boda-Admin/ });
-		const last = within(drawer).getByRole('link', { name: 'Importar' });
+		const last = within(drawer).getByRole('button', { name: 'Cuenta de María Pérez' });
 		last.focus();
 		fireEvent.keyDown(document, { key: 'Tab' });
 		expect(document.activeElement).toBe(first);
 		fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
 		expect(document.activeElement).toBe(last);
+
+		fireEvent.click(last);
+		const logoutButton = within(drawer).getByRole('button', { name: 'Cerrar sesión' });
+		logoutButton.focus();
+		fireEvent.keyDown(document, { key: 'Tab' });
+		expect(document.activeElement).toBe(first);
+		fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+		expect(document.activeElement).toBe(logoutButton);
 	});
 
 	it('mantiene la ruta activa, expande Invitaciones y cierra al navegar', () => {
