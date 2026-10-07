@@ -10,6 +10,7 @@ export function useViewportPopover(
 	open: boolean,
 	anchor: RefObject<HTMLElement | null>,
 	panel: RefObject<HTMLElement | null>,
+	placementKey?: string | number | null,
 ): PopoverSpace {
 	const [space, setSpace] = useState<PopoverSpace>({ above: false });
 
@@ -37,7 +38,7 @@ export function useViewportPopover(
 			window.removeEventListener('scroll', update, true);
 			window.visualViewport?.removeEventListener('resize', update);
 		};
-	}, [open, anchor, panel]);
+	}, [open, anchor, panel, placementKey]);
 
 	return space;
 }

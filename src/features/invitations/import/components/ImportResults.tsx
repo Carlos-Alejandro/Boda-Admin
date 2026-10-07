@@ -22,7 +22,7 @@ export function ImportResults({ items, running, reconciling = false, storageBloc
       : 'Las invitaciones creadas se conservan. No hay reintentos automáticos. Continúa esta sesión para reconciliar resultados desconocidos y procesar las pendientes con sus claves originales. Si hubo un rechazo por acceso o demasiadas solicitudes, resuelve la causa antes de continuar.'}</p>}
     {storageBlocked && <p role="alert">No es seguro recargar ni iniciar otra importación mientras no se resuelva el error local. Los resultados visibles pueden estar solo en memoria.</p>}
     {items.some(hasUnconfirmedCreation) && <p role="alert">Un resultado sin confirmar puede corresponder a una invitación ya creada, incluso si su reconciliación falló. Conserva la sesión; no vuelvas a importar esa fila con una clave nueva.</p>}
-    <ul className="space-y-3">
+    <ul className="space-y-3" tabIndex={0} aria-label="Resultados por invitación">
       {items.map(item => <li key={item.row} className="break-words">
         <p>Fila {item.row}: {item.displayName} — {labels[item.status]}</p>
         {item.status === 'created' && item.invitationId && <p>ID: {item.invitationId} · <Link className="underline" to={`/invitaciones/${encodeURIComponent(item.invitationId)}`}>Ver invitación</Link></p>}

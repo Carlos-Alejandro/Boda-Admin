@@ -2,6 +2,7 @@ import { type PointerEvent, type ReactNode, useEffect, useLayoutEffect, useRef, 
 import { useParams } from 'react-router-dom';
 import { ApiError } from '../../../services/http/apiClient';
 import { Button, ButtonLink } from '../../../shared/components/Button/Button';
+import { useViewportPopover } from '../../../shared/hooks/useViewportPopover';
 import { notify } from '../../../shared/notifications/notify';
 import { getInvitationById } from '../api/invitationService';
 import { InvitationStatusBadge } from '../components/InvitationStatusBadge';
@@ -96,6 +97,9 @@ function InvitationDetail({ id }: { id: string | undefined }) {
   const [orderAnnouncement, setOrderAnnouncement] = useState('');
   const dragSession = useRef<CardDragSession | null>(null);
   const cardList = useRef<HTMLDivElement>(null);
+  const menuAnchor = useRef<HTMLDivElement>(null);
+  const menuPanel = useRef<HTMLDivElement>(null);
+  const menuSpace = useViewportPopover(openMenuIndex !== null, menuAnchor, menuPanel, openMenuIndex);
   const beforeMove = useRef<Map<CardKey, DOMRect> | null>(null);
 
   useLayoutEffect(() => {
@@ -276,9 +280,9 @@ function InvitationDetail({ id }: { id: string | undefined }) {
               <span className={`invitation-detail__person-status ${guest.attending === true ? 'is-attending' : guest.attending === false ? 'is-declined' : 'is-pending'}`}>
                 {guest.attending === true ? 'Asiste' : guest.attending === false ? 'No asiste' : 'Sin respuesta'}
               </span>
-              {idle && (canEdit || canRemove || guest.type === 'replacement') && <div className="invitation-detail__menu-wrap">
-                <button type="button" className="invitation-detail__menu-trigger" aria-label={`Acciones para ${guest.name.trim() || guest.shortName || `persona ${index + 1}`}`} aria-expanded={openMenuIndex === index} onClick={() => setOpenMenuIndex(openMenuIndex === index ? null : index)}>⋮</button>
-                {openMenuIndex === index && <div className="invitation-detail__menu">
+              {idle && (canEdit || canRemove || guest.type === 'replacement') && <div ref={openMenuIndex === index ? menuAnchor : undefined} className="invitation-detail__menu-wrap">
+                <button type="button" className="invitation-detail__menu-trigger" aria-label={`Acciones para ${guest.name.trim() || guest.shortName || `persona ${index + 1}`}`} aria-expanded={openMenuIndex === index} aria-controls={openMenuIndex === index ? `invitation-detail-menu-${index}` : undefined} onClick={() => setOpenMenuIndex(openMenuIndex === index ? null : index)}>⋮</button>
+                {openMenuIndex === index && <div ref={menuPanel} id={`invitation-detail-menu-${index}`} className={`invitation-detail__menu${menuSpace.above ? ' invitation-detail__menu--above' : ''}`} style={{ maxHeight: menuSpace.maxHeight }}>
                   {canEdit && <button type="button" onClick={() => { setOpenMenuIndex(null); setNotice(''); setEditingNameIndex(index); }}>Editar nombre</button>}
                   {guest.type === 'replacement' && <button type="button" onClick={() => { setOpenMenuIndex(null); setNotice(''); setRestoringIndex(index); }}>Restaurar invitado original</button>}
                   {canRemove && <button type="button" disabled={invitation.maxGuests <= 1} title={invitation.maxGuests <= 1 ? 'No se puede eliminar el último invitado.' : undefined} onClick={() => { setOpenMenuIndex(null); setNotice(''); setRemovingIndex(index); }}>Eliminar invitado</button>}

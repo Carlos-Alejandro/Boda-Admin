@@ -1,14 +1,15 @@
 .create-invitation-page {
 	container-type: inline-size;
 	color: var(--color-admin-green-900);
-	font-size: .94rem;
+	font-size: var(--text-admin-body);
 }
 
 .create-invitation-form {
 	display: grid;
-	grid-template-columns: minmax(0, 7fr) minmax(17rem, 3fr);
+	grid-template-columns: minmax(0, 1fr) minmax(16rem, .43fr);
 	width: 100%;
-	margin: 1.75rem auto 0;
+	max-width: 62rem;
+	margin: var(--page-section-gap) auto 0;
 	overflow: hidden;
 	border: 1px solid #e5ded0;
 	border-radius: .65rem;
@@ -21,8 +22,8 @@
 	display: flex;
 	min-width: 0;
 	flex-direction: column;
-	gap: .85rem;
-	padding: 1.1rem;
+	gap: .7rem;
+	padding: .95rem;
 	border-left: 1px solid var(--border);
 	background: #faf8f3;
 }
@@ -30,10 +31,10 @@
 .create-invitation-form__row {
 	display: grid;
 	min-width: 0;
-	grid-template-columns: 2.35rem minmax(0, 1fr);
+	grid-template-columns: 2.2rem minmax(0, 1fr);
 	align-items: start;
-	gap: .85rem;
-	padding: 1.1rem 1.15rem;
+	gap: .75rem;
+	padding: .95rem 1.1rem;
 	border-bottom: 1px solid var(--border);
 }
 .create-invitation-form__row:last-child { border-bottom: 0; }
@@ -42,8 +43,8 @@ fieldset.create-invitation-form__row { min-inline-size: 0; margin: 0; border-top
 .create-invitation-form__icon,
 .create-invitation-summary__icon {
 	display: grid;
-	width: 2.35rem;
-	height: 2.35rem;
+	width: 2.2rem;
+	height: 2.2rem;
 	place-items: center;
 	border-radius: 50%;
 	background: var(--green-100);
@@ -64,7 +65,7 @@ fieldset.create-invitation-form__row { min-inline-size: 0; margin: 0; border-top
 .create-invitation-form input[type="text"],
 .create-invitation-form input[type="number"] {
 	width: 100%;
-	min-height: 3.15rem;
+	min-height: 2.75rem;
 	padding: .45rem .7rem;
 	border: 1px solid #cfc8b9;
 	border-radius: .65rem;
@@ -84,7 +85,7 @@ fieldset.create-invitation-form__row { min-inline-size: 0; margin: 0; border-top
 .create-invitation-form__guest-row { display: flex; align-items: center; gap: .55rem; }
 .create-invitation-form__guest-row label { flex: 1; min-width: 0; }
 .create-invitation-form__add-person,
-.create-invitation-form__remove-person { min-height: 2.3rem; padding: .4rem .7rem; border-radius: .5rem; font-size: .82rem; font-weight: 700; }
+.create-invitation-form__remove-person { min-height: 2.75rem; padding: .4rem .7rem; border-radius: .5rem; font-size: .82rem; font-weight: 700; }
 .create-invitation-form__add-person { justify-self: start; margin-top: .2rem; border: 1px solid #9db0a7; background: #f4f7f4; color: var(--green-700); }
 .create-invitation-form__add-person:hover { background: var(--green-100); }
 .create-invitation-form__remove-person { border: 1px solid #decac4; background: #fffafa; color: #8a4c3e; }
@@ -93,7 +94,7 @@ fieldset.create-invitation-form__row { min-inline-size: 0; margin: 0; border-top
 
 .create-invitation-form__toggle-line { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1rem; }
 .create-invitation-form__toggle-line > div { display: grid; gap: .3rem; }
-.create-invitation-form__switch { display: inline-flex; align-items: center; cursor: pointer; }
+.create-invitation-form__switch { display: inline-flex; min-height: 2.75rem; align-items: center; cursor: pointer; }
 .create-invitation-form__switch input {
 	position: relative;
 	width: 2.75rem;
@@ -123,17 +124,17 @@ fieldset.create-invitation-form__row { min-inline-size: 0; margin: 0; border-top
 .create-invitation-form__switch input:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .create-invitation-form__switch input:disabled { cursor: not-allowed; opacity: .55; }
 
-.create-invitation-summary { padding: 1rem; border: 1px solid #dfd4bd; border-radius: .75rem; background: #faf7ef; text-align: center; }
+.create-invitation-summary { padding: .85rem; border: 1px solid #dfd4bd; border-radius: .75rem; background: #faf7ef; text-align: center; }
 .create-invitation-summary__icon { margin: 0 auto .65rem; border: 1px solid #cdbb94; background: #f5efe3; color: #91764e; }
 .create-invitation-summary h2 { margin: 0; color: var(--green-950); font-family: var(--font-admin-serif); font-size: 1.12rem; font-weight: 600; }
-.create-invitation-summary__list { margin: .9rem 0 0; overflow: hidden; border: 1px solid var(--border); border-radius: .5rem; background: var(--surface); text-align: left; }
+.create-invitation-summary__list { margin: .7rem 0 0; overflow: hidden; border: 1px solid var(--border); border-radius: .5rem; background: var(--surface); text-align: left; }
 .create-invitation-summary__list > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .6rem; min-height: 2.25rem; padding: .45rem .7rem; }
 .create-invitation-summary__list > div + div { border-top: 1px solid var(--border); }
 .create-invitation-summary__list dt { color: var(--text-muted); font-size: .76rem; }
 .create-invitation-summary__list dd { margin: 0; color: var(--green-950); font-size: .9rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .create-invitation-summary__replacement { margin: .7rem 0 0; color: var(--green-700); font-size: .72rem; }
 
-.create-invitation-form__info { display: flex; align-items: center; gap: .65rem; padding: .75rem .85rem; border: 1px solid #dce6df; border-radius: .6rem; background: #eff4f0; color: #435e50; }
+.create-invitation-form__info { display: flex; align-items: center; gap: .65rem; padding: .7rem .8rem; border: 1px solid #dce6df; border-radius: .6rem; background: #eff4f0; color: #435e50; }
 .create-invitation-form__info-icon { display: grid; flex: 0 0 1.4rem; place-items: center; }
 .create-invitation-form__info-icon svg { width: 1.35rem; height: 1.35rem; }
 .create-invitation-form__info p { margin: 0; font-size: .76rem; line-height: 1.45; }
@@ -233,15 +234,23 @@ fieldset.create-invitation-form__row { min-inline-size: 0; margin: 0; border-top
 
 @container (max-width: 52rem) {
 	.create-invitation-form { grid-template-columns: minmax(0, 1fr); }
-	.create-invitation-form__side { border-top: 1px solid var(--border); border-left: 0; }
+	.create-invitation-form__side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, .75fr); align-items: start; border-top: 1px solid var(--border); border-left: 0; }
+	.create-invitation-summary { grid-row: 1 / span 3; }
+	.create-invitation-form__actions { margin-top: 0; }
 }
 
 @container (max-width: 36rem) {
+	.create-invitation-form__side { grid-template-columns: minmax(0, 1fr); }
+	.create-invitation-summary { grid-row: auto; }
 	.create-invitation-form__row { grid-template-columns: 2.1rem minmax(0, 1fr); gap: .7rem; padding: .9rem; }
 	.create-invitation-form__icon { width: 2.1rem; height: 2.1rem; }
 	.create-invitation-form__number-line { align-items: flex-start; flex-direction: column; gap: .45rem; }
 	.create-invitation-form__side { padding: .9rem; }
 	.create-invitation-form__actions { grid-template-columns: minmax(0, 1fr); }
+	.create-invitation-form__guest-row { align-items: center; }
+}
+
+@container (max-width: 20rem) {
 	.create-invitation-form__guest-row { align-items: stretch; flex-direction: column; }
 	.create-invitation-form__remove-person { align-self: flex-end; }
 }

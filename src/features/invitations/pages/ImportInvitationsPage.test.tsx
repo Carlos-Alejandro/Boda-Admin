@@ -64,6 +64,8 @@ describe('vista previa y creación confirmada', () => {
     expect(FakeWorker.instances[0].postMessage).toHaveBeenCalledOnce();
     act(() => FakeWorker.instances[0].reply({ ok: true, analysis: analysis() }));
     expect(screen.getByText('Familia de prueba')).toBeTruthy();
+    expect(document.querySelectorAll('.import-page__metrics > div')).toHaveLength(8);
+    expect(screen.getByRole('region', { name: 'Lista desplazable de invitaciones interpretadas' }).getAttribute('tabindex')).toBe('0');
     const button = screen.getByRole('button', { name: 'Continuar' }) as HTMLButtonElement;
     expect(button.disabled).toBe(false);
     fireEvent.click(button);

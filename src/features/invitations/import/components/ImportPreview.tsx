@@ -14,17 +14,17 @@ export function ImportPreview({ analysis }: { analysis: ImportAnalysis }) {
     ['Invitaciones válidas', summary.validInvitations], ['Invitaciones con errores', summary.invalidInvitations],
     ['Cantidad de errores', summary.errors], ['Cantidad de advertencias', summary.warnings],
   ] as const;
-  return <div className="import-page__preview space-y-5">
+  return <div className="import-page__preview">
     <h2 className="font-admin-serif text-xl">Resumen del archivo</h2>
     {!analysis.valid && <p>Los totales de personas y cupos incluyen únicamente invitaciones válidas. Debes corregir todos los errores del archivo.</p>}
-    <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <dl className="import-page__metrics">
       {metrics.map(([label, value]) => <div key={label} className="rounded-lg border border-admin-border bg-surface p-3">
         <dt className="text-sm text-admin-muted">{label}</dt><dd className="m-0 text-xl font-semibold break-words">{value}</dd>
       </div>)}
     </dl>
     {analysis.issues.length > 0 && <section aria-labelledby="import-issues-title">
       <h2 id="import-issues-title" className="font-admin-serif text-xl">Errores y advertencias</h2>
-      <ul className="max-h-96 space-y-2 overflow-auto p-1">
+      <ul className="import-page__issue-list space-y-2 p-1" tabIndex={0} aria-label="Lista de errores y advertencias">
         {analysis.issues.map((issue, index) => <li key={index} className="rounded-lg border border-admin-border bg-surface p-3 break-words">
           <strong className={issue.severity === 'error' ? 'text-admin-danger' : ''}>{issue.severity === 'error' ? 'Error' : 'Advertencia'} · {issue.sheet} · fila {issue.row} · {issue.column}</strong>
           <p className="mb-0 mt-1">{issue.message}</p>
@@ -33,7 +33,7 @@ export function ImportPreview({ analysis }: { analysis: ImportAnalysis }) {
     </section>}
     <section aria-labelledby="import-invitations-title">
       <h2 id="import-invitations-title" className="font-admin-serif text-xl">Invitaciones interpretadas</h2>
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="import-page__preview-cards" tabIndex={0} role="region" aria-label="Lista desplazable de invitaciones interpretadas">
         {analysis.invitations.map((invitation) => <article key={invitation.row} className="min-w-0 rounded-lg border border-admin-border bg-surface p-4 break-words">
           <h3 className="m-0 text-lg font-semibold">{invitation.displayName ?? 'Sin nombre válido'}</h3>
           <p>Fila {invitation.row} de Invitaciones</p>

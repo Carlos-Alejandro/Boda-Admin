@@ -5,10 +5,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { useViewportPopover } from './useViewportPopover';
 
-function Fixture({ open }: { open: boolean }) {
+function Fixture({ open, placementKey }: { open: boolean; placementKey?: number }) {
 	const anchor = useRef<HTMLDivElement>(null);
 	const panel = useRef<HTMLDivElement>(null);
-	const space = useViewportPopover(open, anchor, panel);
+	const space = useViewportPopover(open, anchor, panel, placementKey);
 	return <>
 		<div ref={anchor} data-testid="anchor" />
 		<div ref={panel} data-testid="panel" />
@@ -31,5 +31,9 @@ describe('useViewportPopover', () => {
 		anchor.getBoundingClientRect = () => ({ top: 100, bottom: 150 } as DOMRect);
 		fireEvent(window, new Event('resize'));
 		expect(screen.getByTestId('placement').textContent).toBe('below:598');
+
+		anchor.getBoundingClientRect = () => ({ top: 650, bottom: 700 } as DOMRect);
+		view.rerender(<Fixture open placementKey={1} />);
+		expect(screen.getByTestId('placement').textContent).toBe('above:630');
 	});
 });

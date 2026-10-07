@@ -159,6 +159,21 @@ describe('detalle de la invitación', () => {
     await waitFor(() => expect(removeInvitationGuest).toHaveBeenCalledWith(base.id, 1, base.version));
   });
 
+  it('coloca el menú de personas sobre la fila cuando falta espacio debajo', async () => {
+    await mount();
+    const trigger = screen.getByRole('button', { name: 'Acciones para Cassandra Us Hernandez' });
+    const anchor = trigger.parentElement as HTMLDivElement;
+    anchor.getBoundingClientRect = () => ({ top: 650, bottom: 700 } as DOMRect);
+    fireEvent.click(trigger);
+    const panel = document.getElementById('invitation-detail-menu-0') as HTMLDivElement;
+    Object.defineProperty(panel, 'scrollHeight', { configurable: true, value: 240 });
+    fireEvent(window, new Event('resize'));
+    expect(panel.classList.contains('invitation-detail__menu--above')).toBe(true);
+    expect(panel.style.maxHeight).toBe('630px');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(document.activeElement).toBe(trigger);
+  });
+
   it('conserva la restauración de una sustitución y las acciones de permiso', async () => {
     await mount({ guests: [base.guests[0], { name: 'María Nueva', shortName: 'María', type: 'replacement', attending: true, originalName: 'María Original' }] });
     fireEvent.click(screen.getByRole('button', { name: 'Acciones para María Nueva' }));
