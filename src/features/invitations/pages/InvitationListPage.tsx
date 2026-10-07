@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Button, ButtonLink } from '../../../shared/components/Button/Button';
 import { PageHeader } from '../../../shared/components/PageHeader/PageHeader';
+import { useViewportPopover } from '../../../shared/hooks/useViewportPopover';
 import { getInvitations } from '../api/invitationService';
 import { InvitationFilters } from '../components/InvitationFilters';
 import { InvitationList } from '../components/InvitationList';
@@ -97,6 +98,8 @@ export function InvitationListPage() {
 	const [error, setError] = useState(false);
 	const requestSequence = useRef(0);
 	const filterControl = useRef<HTMLDivElement>(null);
+	const filterPanel = useRef<HTMLDivElement>(null);
+	const filterSpace = useViewportPopover(filtersOpen, filterControl, filterPanel);
 
 	useEffect(() => {
 		const timeout = window.setTimeout(() => {
@@ -258,8 +261,10 @@ export function InvitationListPage() {
 						{appliedFilterCount > 0 && <span className="invitation-toolbar__filter-count" aria-hidden="true">{appliedFilterCount}</span>}
 					</Button>
 					<div
+						ref={filterPanel}
 						id={filtersId}
-						className={`invitation-filter-panel${filtersOpen ? ' invitation-filter-panel--open' : ''}`}
+						className={`invitation-filter-panel${filtersOpen ? ' invitation-filter-panel--open' : ''}${filterSpace.above ? ' invitation-filter-panel--above' : ''}`}
+						style={filtersOpen ? { maxHeight: filterSpace.maxHeight } : undefined}
 						role="dialog"
 						aria-labelledby={filtersTitleId}
 						aria-hidden={!filtersOpen}

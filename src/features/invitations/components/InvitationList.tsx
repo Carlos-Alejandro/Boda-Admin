@@ -1,6 +1,8 @@
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 
+import { useViewportPopover } from '../../../shared/hooks/useViewportPopover';
 import { notify } from '../../../shared/notifications/notify';
 import { InvitationArchiveConfirmation } from './InvitationArchiveConfirmation';
 import { InvitationStatusBadge } from './InvitationStatusBadge';
@@ -131,7 +133,9 @@ function InvitationActions({ invitation, open, onToggle, onClose, onInvitationCh
 	const actionRoot = useRef<HTMLDivElement>(null);
 	const trigger = useRef<HTMLButtonElement>(null);
 	const menu = useRef<HTMLDivElement>(null);
+	const dialog = useRef<HTMLDivElement>(null);
 	const menuId = useId();
+	const menuSpace = useViewportPopover(open, actionRoot, menu);
 
 	useEffect(() => {
 		if (!open) return;
@@ -183,6 +187,41 @@ function InvitationActions({ invitation, open, onToggle, onClose, onInvitationCh
 		requestAnimationFrame(() => trigger.current?.focus());
 	};
 
+	useEffect(() => {
+		if (!confirmingArchive) return;
+		const previousOverflow = document.body.style.overflow;
+		const appRoot = document.getElementById('root');
+		const previousInert = appRoot?.inert;
+		document.body.style.overflow = 'hidden';
+		if (appRoot) appRoot.inert = true;
+		const onKeyDown = (event: globalThis.KeyboardEvent) => {
+			if (event.key === 'Escape') {
+				const cancel = dialog.current?.querySelector<HTMLButtonElement>('[data-archive-cancel]');
+				if (!cancel || cancel.disabled) return;
+				event.preventDefault();
+				cancel.click();
+			} else if (event.key === 'Tab') {
+				const buttons = Array.from(dialog.current?.querySelectorAll<HTMLButtonElement>('button:not([disabled])') ?? []);
+				const first = buttons[0];
+				const last = buttons.at(-1);
+				if (!first || !last) return;
+				if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog.current?.querySelector('h3'))) {
+					event.preventDefault();
+					last.focus();
+				} else if (!event.shiftKey && document.activeElement === last) {
+					event.preventDefault();
+					first.focus();
+				}
+			}
+		};
+		document.addEventListener('keydown', onKeyDown);
+		return () => {
+			document.body.style.overflow = previousOverflow;
+			if (appRoot) appRoot.inert = previousInert ?? false;
+			document.removeEventListener('keydown', onKeyDown);
+		};
+	}, [confirmingArchive]);
+
 	return (
 		<>
 			<div className="invitation-actions" ref={actionRoot}>
@@ -203,7 +242,7 @@ function InvitationActions({ invitation, open, onToggle, onClose, onInvitationCh
 					<span aria-hidden="true">⋮</span>
 				</button>
 				{open && (
-					<div ref={menu} id={menuId} className="invitation-actions__menu" role="menu" onKeyDown={onMenuKeyDown}>
+					<div ref={menu} id={menuId} className={`invitation-actions__menu${menuSpace.above ? ' invitation-actions__menu--above' : ''}`} style={{ maxHeight: menuSpace.maxHeight }} role="menu" onKeyDown={onMenuKeyDown}>
 						<Link role="menuitem" tabIndex={0} to={`/invitaciones/${encodeURIComponent(invitation.id)}`} onClick={onClose}>
 							<svg className="invitation-actions__menu-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m5 16.5-.8 3.3 3.3-.8L18 8.5 15.5 6 5 16.5Z" /><path d="m13.8 7.7 2.5 2.5" /></svg>
 							<span>Editar invitación</span>
@@ -226,9 +265,9 @@ function InvitationActions({ invitation, open, onToggle, onClose, onInvitationCh
 				)}
 			</div>
 
-			{confirmingArchive && (
+			{confirmingArchive && createPortal(
 				<div className="invitation-confirmation-backdrop">
-					<div className="invitation-confirmation-dialog" role="dialog" aria-modal="true" aria-label={`${invitation.isArchived ? 'Restaurar' : 'Archivar'} invitación`}>
+					<div ref={dialog} className="invitation-confirmation-dialog" role="dialog" aria-modal="true" aria-label={`${invitation.isArchived ? 'Restaurar' : 'Archivar'} invitación`}>
 						<InvitationArchiveConfirmation
 							invitation={invitation}
 							onCancel={closeConfirmation}
@@ -237,7 +276,7 @@ function InvitationActions({ invitation, open, onToggle, onClose, onInvitationCh
 							onRefresh={() => { closeConfirmation(); onReloadRequested(); }}
 						/>
 					</div>
-				</div>
+				</div>, document.body
 			)}
 		</>
 	);
@@ -252,13 +291,13 @@ export function InvitationList({ items, search, onInvitationChanged, onReloadReq
 				<caption className="visually-hidden">Listado de invitaciones</caption>
 				<thead>
 					<tr>
-						<th scope="col">Familia / Nombre</th>
-						<th scope="col">Código</th>
-						<th scope="col">Invitados</th>
-						<th scope="col">Asistencia</th>
-						<th scope="col">Estado</th>
-						<th scope="col">Enlace</th>
-						<th scope="col">Acciones</th>
+						<th id="invitation-col-name" scope="col">Familia / Nombre</th>
+						<th id="invitation-col-code" scope="col">Código</th>
+						<th id="invitation-col-guests" scope="col">Invitados</th>
+						<th id="invitation-col-attendance" scope="col">Asistencia</th>
+						<th id="invitation-col-status" scope="col">Estado</th>
+						<th id="invitation-col-link" scope="col">Enlace</th>
+						<th id="invitation-col-actions" scope="col">Acciones</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -276,7 +315,7 @@ export function InvitationList({ items, search, onInvitationChanged, onReloadReq
 									openMenuId === invitation.id ? 'invitation-table__menu-open' : '',
 								].filter(Boolean).join(' ') || undefined}
 							>
-								<td data-label="Familia / Nombre" className="invitation-table__identity-cell">
+								<td headers="invitation-col-name" className="invitation-table__identity-cell">
 									<div className="invitation-table__identity">
 										<span className={`invitation-table__avatar invitation-table__avatar--${invitation.rsvpStatus}`} aria-hidden="true">{initials(invitation.displayName)}</span>
 										<span className="invitation-table__identity-copy">
@@ -292,27 +331,31 @@ export function InvitationList({ items, search, onInvitationChanged, onReloadReq
 										</span>
 									</div>
 								</td>
-								<td data-label="Código"><code>{invitation.id}</code></td>
-								<td data-label="Invitados">
+								<td headers="invitation-col-code"><span className="invitation-table__mobile-label" aria-hidden="true">Código</span><code>{invitation.id}</code></td>
+								<td headers="invitation-col-guests">
+									<span className="invitation-table__mobile-label" aria-hidden="true">Invitados</span>
 									<div className="invitation-table__count">
 										<strong>{identified.length} / {invitation.maxGuests}</strong>
 										<small>{identified.length === 1 ? 'identificado' : 'identificados'}</small>
 									</div>
 								</td>
-								<td data-label="Asistencia" className="invitation-table__attendance-cell">
+								<td headers="invitation-col-attendance" className="invitation-table__attendance-cell">
+									<span className="invitation-table__mobile-label" aria-hidden="true">Asistencia</span>
 									<div className="invitation-table__attendance">
 										<span className={attending === 0 ? 'invitation-table__attendance-zero' : 'invitation-table__attendance-positive'}><strong>{attending}</strong> {attending === 1 ? 'asiste' : 'asisten'}</span>
 										<span className={declining === 0 ? 'invitation-table__attendance-zero' : undefined}><strong>{declining}</strong> {declining === 1 ? 'no asiste' : 'no asisten'}</span>
 									</div>
 								</td>
-								<td data-label="Estado" className="invitation-table__status-cell">
+								<td headers="invitation-col-status" className="invitation-table__status-cell">
+									<span className="invitation-table__mobile-label" aria-hidden="true">Estado</span>
 									<div className="invitation-table__status">
 										<InvitationStatusBadge status={invitation.rsvpStatus} />
 										{invitation.isArchived && <InvitationStatusBadge status="archived" />}
 									</div>
 								</td>
-								<td data-label="Enlace"><CopyInvitationLink invitation={invitation} /></td>
-								<td data-label="Acciones" className="invitation-table__actions-cell">
+								<td headers="invitation-col-link"><span className="invitation-table__mobile-label" aria-hidden="true">Enlace</span><CopyInvitationLink invitation={invitation} /></td>
+								<td headers="invitation-col-actions" className="invitation-table__actions-cell">
+									<span className="invitation-table__mobile-label" aria-hidden="true">Acciones</span>
 									<InvitationActions
 										invitation={invitation}
 										open={openMenuId === invitation.id}

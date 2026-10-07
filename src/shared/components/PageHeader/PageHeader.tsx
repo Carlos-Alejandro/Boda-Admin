@@ -19,11 +19,11 @@ export function PageHeader({
 	className = '',
 }: PageHeaderProps) {
 	return (
-		<header className={`${action ? 'flex max-w-none items-end justify-between gap-6 max-[36rem]:flex-col max-[36rem]:items-stretch max-[36rem]:gap-4' : 'max-w-2xl'} ${className}`}>
+		<header className={`page-header ${action ? 'flex max-w-none items-end justify-between gap-6 max-[36rem]:flex-col max-[36rem]:items-stretch max-[36rem]:gap-4' : 'max-w-2xl'} ${className}`}>
 			<div>
 				{eyebrow && <p className="m-0 text-admin-eyebrow font-extrabold tracking-[0.12em] text-[#927039] uppercase">{eyebrow}</p>}
-				<h1 className="mt-0.5 mb-1 font-admin-serif text-[clamp(1.75rem,2.3vw,2.5rem)] font-medium tracking-[-0.025em]" id={titleId}>{title}</h1>
-				<p className="m-0 text-[clamp(0.9rem,0.9vw,1rem)] leading-[1.55] text-admin-muted">{description}</p>
+				<h1 className="mt-0.5 mb-1 font-admin-serif font-medium tracking-[-0.025em]" id={titleId}>{title}</h1>
+				<p className="page-header__description m-0 leading-[1.55] text-admin-muted">{description}</p>
 			</div>
 			{action && <div className="max-[36rem]:flex max-[36rem]:[&>*]:w-full">{action}</div>}
 		</header>

@@ -3,7 +3,7 @@
 	width: 100%;
 	min-width: 0;
 	color: var(--color-admin-green-900);
-	font-size: .94rem;
+	font-size: var(--text-admin-body);
 	isolation: isolate;
 	container-type: inline-size;
 }
@@ -13,7 +13,7 @@
 	flex-wrap: wrap;
 	align-items: center;
 	gap: .75rem;
-	margin-top: 1.75rem;
+	margin-top: var(--page-section-gap);
 }
 
 .invitation-toolbar > a,
@@ -144,6 +144,9 @@
 	right: 0;
 	z-index: 80;
 	width: min(21rem, calc(100vw - 2rem));
+	max-height: calc(100dvh - 2rem);
+	overflow-y: auto;
+	overscroll-behavior: contain;
 	border: 1px solid #d8d0c1;
 	border-radius: .75rem;
 	background: rgba(255, 254, 250, .985);
@@ -156,6 +159,8 @@
 	transition: opacity .17s ease, transform .17s cubic-bezier(.2,.75,.25,1), visibility .17s;
 }
 
+.invitation-filter-panel--above { top: auto; bottom: calc(100% + .55rem); }
+
 .invitation-filter-panel--open {
 	visibility: visible;
 	opacity: 1;
@@ -166,7 +171,7 @@
 .invitation-filter-panel__title {
 	margin: 0 0 .85rem;
 	color: #6b786f;
-	font-size: .66rem;
+	font-size: var(--text-admin-micro);
 	font-weight: 800;
 	letter-spacing: .11em;
 	text-transform: uppercase;
@@ -279,8 +284,8 @@
 }
 
 .invitation-pagination button {
-	min-width: 2.35rem;
-	min-height: 2.35rem;
+	min-width: 2.5rem;
+	min-height: 2.5rem;
 	border: 1px solid #cdd6d1;
 	border-radius: .5rem;
 	background: rgba(255, 254, 250, .82);
@@ -460,7 +465,6 @@
 	border-radius: .6rem;
 	background: transparent;
 	box-shadow: none;
-	perspective: 900px;
 	overflow: visible;
 }
 
@@ -477,7 +481,7 @@
 	background: rgba(245, 241, 232, .78);
 	padding: .72rem .8rem;
 	color: #718078;
-	font-size: .64rem;
+	font-size: .7rem;
 	font-weight: 800;
 	letter-spacing: .095em;
 	text-align: left;
@@ -512,6 +516,8 @@
 .invitation-table tbody tr:hover td:first-child { box-shadow: inset 3px 0 0 rgba(169, 132, 69, .7), 0 .22rem .75rem rgba(34, 54, 45, .045); }
 .invitation-table tbody tr:hover .invitation-table__avatar { transform: scale(1.045) rotate(-2deg); }
 .invitation-table tbody tr.invitation-table__archived td { background: rgba(247, 244, 236, .78); }
+
+.invitation-table__mobile-label { display: none; }
 
 .invitation-table__identity {
 	display: flex;
@@ -720,6 +726,9 @@
 	display: grid;
 	width: max-content;
 	min-width: 10.6rem;
+	max-height: calc(100dvh - 2rem);
+	overflow-y: auto;
+	overscroll-behavior: contain;
 	border: 1px solid #d5cbbb;
 	border-radius: .7rem;
 	background: #fffefa;
@@ -728,6 +737,7 @@
 	isolation: isolate;
 	animation: invitation-menu-arrive .18s cubic-bezier(.2,.75,.25,1) both;
 }
+.invitation-actions__menu--above { top: auto; bottom: calc(100% + .5rem); }
 
 @keyframes invitation-menu-arrive {
 	from { opacity: 0; transform: translateY(-4px) scale(.98); }
@@ -783,6 +793,9 @@
 
 .invitation-confirmation-dialog {
 	width: min(30rem, 100%);
+	max-height: calc(100dvh - 2rem);
+	overflow-y: auto;
+	overscroll-behavior: contain;
 	border: 1px solid rgba(228, 222, 209, .8);
 	border-radius: .85rem;
 	background: var(--color-surface);
@@ -796,7 +809,14 @@
 }
 .invitation-confirmation-dialog > section { margin: 0; border: 0; background: transparent; padding: 1.2rem; }
 
-@container (max-width: 58rem) {
+@container (max-width: 68rem) {
+	.invitation-table th:first-child { width: 23%; }
+	.invitation-table th:last-child { width: 23%; }
+	.invitation-actions { gap: .4rem; }
+	.invitation-actions__detail { width: 7.5rem; gap: .35rem; padding-inline: .6rem; }
+}
+
+@container (max-width: 62rem) {
 	.invitation-skeleton__header { display: none; }
 	.invitation-skeleton__visual { gap: .75rem; }
 	.invitation-skeleton__row {
@@ -811,7 +831,7 @@
 	.invitation-table-shell { border: 0; background: transparent; box-shadow: none; }
 	.invitation-table,
 	.invitation-table tbody { display: block; }
-	.invitation-table thead { display: none; }
+	.invitation-table thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 	.invitation-table tbody { display: grid; gap: .75rem; }
 	.invitation-table tr {
 		display: grid;
@@ -828,30 +848,32 @@
 	}
 	.invitation-table td:first-child { padding: .9rem .85rem .7rem; }
 	.invitation-table td:last-child { padding: .65rem .85rem .9rem; }
-	.invitation-table td::before {
+	.invitation-table__mobile-label {
 		display: block;
 		margin-bottom: .3rem;
 		color: #7b8982;
-		content: attr(data-label);
-		font-size: .6rem;
+		font-size: .7rem;
 		font-weight: 800;
 		letter-spacing: .08em;
 		text-transform: uppercase;
 	}
 	.invitation-table__identity-cell { grid-column: 1 / -1; border-bottom: 1px solid #ece7dc !important; }
-	.invitation-table__identity-cell::before { display: none !important; }
+	.invitation-table__identity-cell .invitation-table__mobile-label { display: none; }
 	.invitation-copy { justify-content: flex-start; }
 	.invitation-actions { justify-content: flex-start; }
 	.invitation-actions__menu { right: auto; left: 0; }
+	.invitation-pagination button { min-width: 2.75rem; min-height: 2.75rem; }
+	.invitation-copy__button,
+	.invitation-actions__trigger { width: 2.75rem; height: 2.75rem; }
 }
 
-@media (max-width: 48rem) {
-	.invitation-toolbar { align-items: stretch; }
-	.invitation-search { flex-basis: 100%; }
-	.invitation-toolbar > a,
-	.invitation-filter-control { flex: 1 1 auto; }
+@container (max-width: 62rem) {
+	.invitation-toolbar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
+	.invitation-search { grid-column: 1 / -1; min-width: 0; }
 	.invitation-filter-control,
-	.invitation-toolbar__filter { width: auto; }
+	.invitation-toolbar__filter,
+	.invitation-toolbar > .invitation-toolbar__create,
+	.invitation-toolbar > .invitation-toolbar__import { width: 100%; min-width: 0; }
 	.invitation-filter-panel {
 		right: auto;
 		left: 0;
@@ -861,12 +883,9 @@
 	.invitation-pagination { width: 100%; justify-content: space-between; }
 }
 
-@media (max-width: 36rem) {
-	.invitation-list-page { font-size: .9375rem; }
-	.invitation-toolbar > a,
-	.invitation-filter-control { width: calc(50% - .35rem); }
-	.invitation-toolbar__filter { width: 100%; }
-	.invitation-toolbar__create { order: 2; }
+@container (max-width: 36rem) {
+	.invitation-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	.invitation-toolbar > .invitation-toolbar__create { grid-column: 1 / -1; }
 	.invitation-empty__actions { width: 100%; }
 	.invitation-empty__actions > a,
 	.invitation-empty__actions > button { flex: 1 1 100%; }
@@ -883,11 +902,9 @@
 	.invitation-pagination__pages { order: -1; width: 100%; justify-content: center; }
 }
 
-@media (max-width: 23.5rem) {
-	.invitation-toolbar > a,
-	.invitation-filter-control { flex: 1 1 100%; width: 100%; }
-	.invitation-toolbar > .invitation-toolbar__create,
-	.invitation-toolbar > .invitation-toolbar__import { width: 100%; }
+@container (max-width: 20rem) {
+	.invitation-toolbar { grid-template-columns: minmax(0, 1fr); }
+	.invitation-toolbar > .invitation-toolbar__create { grid-column: auto; }
 	.invitation-table tr,
 	.invitation-skeleton__row { grid-template-columns: minmax(0, 1fr); }
 	.invitation-table td,
@@ -896,6 +913,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+	.invitation-confirmation-backdrop,
+	.invitation-confirmation-dialog { animation: none; }
 	.invitation-list-page *,
 	.invitation-list-page *::before,
 	.invitation-list-page *::after {

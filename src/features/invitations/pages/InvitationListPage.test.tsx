@@ -119,9 +119,11 @@ describe('listado de invitaciones', () => {
 		expect(within(row).getByText('REAL-1')).toBeTruthy();
 		expect(within(row).getByText('4 / 5')).toBeTruthy();
 		expect(within(row).getByText('identificados')).toBeTruthy();
-		const attendance = row.querySelector('[data-label="Asistencia"]');
+		const attendance = row.querySelector('[headers="invitation-col-attendance"]');
 		expect(attendance?.textContent).toContain('2 asisten');
 		expect(attendance?.textContent).toContain('1 no asiste');
+		expect(attendance?.querySelector('.invitation-table__mobile-label')?.getAttribute('aria-hidden')).toBe('true');
+		expect(table.querySelector('#invitation-col-attendance')?.textContent).toBe('Asistencia');
 		expect(within(row).getByText('Parcial')).toBeTruthy();
 		expect(within(row).queryByText('María Original')).toBeNull();
 		expect(screen.getByText('Declinada')).toBeTruthy();
@@ -157,6 +159,18 @@ describe('listado de invitaciones', () => {
 		fireEvent.keyDown(document, { key: 'Escape' });
 		expect(filterButton.getAttribute('aria-expanded')).toBe('false');
 		expect(document.activeElement).toBe(filterButton);
+	});
+
+	it('coloca el filtro sobre el disparador si queda poco espacio debajo', async () => {
+		mount();
+		await ready();
+		const control = document.querySelector<HTMLElement>('.invitation-filter-control')!;
+		const panel = document.getElementById('invitation-list-filters')!;
+		control.getBoundingClientRect = () => ({ top: 650, bottom: 700 } as DOMRect);
+		Object.defineProperty(panel, 'scrollHeight', { configurable: true, value: 240 });
+		fireEvent.click(screen.getByRole('button', { name: 'Filtros' }));
+		expect(panel.classList.contains('invitation-filter-panel--above')).toBe(true);
+		expect(panel.style.maxHeight).toBe('630px');
 	});
 
 	it('mantiene los cambios como draft hasta Aplicar y reabre con los valores aplicados', async () => {
@@ -414,6 +428,21 @@ describe('listado de invitaciones', () => {
 		expect(notify.success).toHaveBeenCalledWith('Invitación restaurada', {
 			description: 'La invitación volvió a estar activa.',
 		});
+	});
+
+	it('mantiene el diálogo de archivo en el viewport y permite cerrarlo con Escape', async () => {
+		mount();
+		await ready();
+		const trigger = screen.getByRole('button', { name: 'Más acciones para Familia Rivera' });
+		fireEvent.click(trigger);
+		fireEvent.click(screen.getByRole('menuitem', { name: 'Archivar' }));
+		const dialog = screen.getByRole('dialog', { name: 'Archivar invitación' });
+		expect(dialog.parentElement?.parentElement).toBe(document.body);
+		expect(document.body.style.overflow).toBe('hidden');
+		fireEvent.keyDown(document, { key: 'Escape' });
+		expect(screen.queryByRole('dialog', { name: 'Archivar invitación' })).toBeNull();
+		expect(document.body.style.overflow).toBe('');
+		expect(archiveInvitation).not.toHaveBeenCalled();
 	});
 
 	it('notifica los fallos reales de archivo y restauración sin omitir confirmación', async () => {

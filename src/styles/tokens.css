@@ -10,13 +10,19 @@
 	--color-admin-muted: #66746d;
 	--color-admin-border: #e4ded1;
 	--color-admin-danger: #9b493b;
-	--font-admin-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	--font-admin-sans: "DM Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 	--font-admin-serif: Georgia, "Times New Roman", serif;	
 	--font-admin-script: "Allura", cursive;
 	--shadow-admin: 0 1rem 3rem rgba(34, 54, 45, 0.07);
 	--radius-admin: 0.8rem;
 	--text-admin-control: 0.85rem;
 	--text-admin-eyebrow: 0.65rem;
+	--text-admin-page-title: clamp(1.875rem, 2.3vw, 2.5rem);
+	--text-admin-page-description: clamp(0.9375rem, 0.9vw, 1rem);
+	--text-admin-section-title: 1.125rem;
+	--text-admin-body: 0.9375rem;
+	--text-admin-secondary: 0.8125rem;
+	--text-admin-micro: 0.75rem;
 }
 
 :root {
@@ -26,8 +32,13 @@
 	font-synthesis: none;
 	text-rendering: optimizeLegibility;
 	--sidebar-width: clamp(15.625rem, calc(10rem + 7.5vw), 18.75rem);
-	--page-max-width: 88rem;
-	--content-padding: clamp(1rem, 2.6vw, 2.75rem);
+	--page-max-width: clamp(88rem, calc(50rem + 35vw), 104rem);
+	--content-padding: clamp(1rem, 2.4vw, 2.5rem);
+	--page-top-space: clamp(1.35rem, 2.2vw, 2.5rem);
+	--page-bottom-space: 3rem;
+	--page-section-gap: clamp(1.25rem, 1.5vw, 1.75rem);
+	--panel-gap: 0.9rem;
+	--surface-padding: clamp(1.1rem, 1.6vw, 1.5rem);
 	--cream: var(--color-cream);
 	--surface: var(--color-surface);
 	--surface-soft: var(--color-surface-soft);
@@ -42,10 +53,16 @@
 	--shadow: var(--shadow-admin);
 }
 
-@media (min-width: 120rem) {
-	:root { --page-max-width: 104rem; }
-}
-
 @media (max-width: 56.25rem) {
 	:root { --sidebar-width: 0px; }
+}
+
+@media (min-width: 56.3125rem) and (max-height: 54rem) {
+	:root {
+		--page-top-space: 1.4rem;
+		--page-bottom-space: 2rem;
+		--page-section-gap: 1.1rem;
+		--panel-gap: 0.75rem;
+		--surface-padding: 1.1rem;
+	}
 }

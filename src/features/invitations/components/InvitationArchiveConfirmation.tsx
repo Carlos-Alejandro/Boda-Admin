@@ -84,7 +84,7 @@ export function InvitationArchiveConfirmation({ invitation, onCancel, onSaved, o
 			{error && <p role="alert" className="mt-3 mb-0 text-sm text-admin-danger">{error}</p>}
 			{saving && <p role="status" className="mt-3 mb-0 text-sm">{restoring ? 'Restaurando invitación...' : 'Archivando invitación...'}</p>}
 			<div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-				<Button variant="secondary" type="button" disabled={saving} onClick={() => { if (!submitting.current) onCancel(); }}>Cancelar</Button>
+				<Button data-archive-cancel variant="secondary" type="button" disabled={saving} onClick={() => { if (!submitting.current) onCancel(); }}>Cancelar</Button>
 				<Button variant="primary" type="button" disabled={saving || Boolean(error)} onClick={() => void confirm()}>{restoring ? 'Confirmar restauración' : 'Confirmar archivo'}</Button>
 			</div>
 		</section>
