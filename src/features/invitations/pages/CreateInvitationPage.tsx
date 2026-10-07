@@ -1,11 +1,10 @@
-import { type FormEvent, useRef, useState } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 
 import { Button, ButtonLink } from '../../../shared/components/Button/Button';
 import { PageHeader } from '../../../shared/components/PageHeader/PageHeader';
 import { notify } from '../../../shared/notifications/notify';
 import { createInvitation } from '../api/invitationService';
 import { CreateInvitationIcon } from '../components/CreateInvitationIcon';
-import { CreationSuccess } from '../components/CreationSuccess';
 import { InvitationSummary } from '../components/InvitationSummary';
 import type {
 	CreateInvitationInput,
@@ -13,7 +12,7 @@ import type {
 } from '../model/invitation.types';
 import './CreateInvitationPage.css';
 
-type FormStatus = 'idle' | 'submitting' | 'success' | 'error';
+type FormStatus = 'idle' | 'submitting' | 'error';
 
 interface FormErrors {
 	displayName?: string;
@@ -32,7 +31,29 @@ export function CreateInvitationPage() {
 	const [createdInvitation, setCreatedInvitation] = useState<Invitation | null>(
 		null,
 	);
+	const successDialogRef = useRef<HTMLDialogElement>(null);
 	const submittingRef = useRef(false);
+
+	useEffect(() => {
+		const dialog = successDialogRef.current;
+		if (createdInvitation && dialog && !dialog.open) dialog.showModal();
+	}, [createdInvitation]);
+
+	const resetForm = () => {
+		setDisplayName('');
+		setKnownGuests([]);
+		setOpenSlots('0');
+		setReplacementsAllowed(false);
+		setErrors({});
+		setCreatedInvitation(null);
+		setStatus('idle');
+	};
+
+	const closeSuccessDialog = () => {
+		const dialog = successDialogRef.current;
+		if (dialog?.open) dialog.close();
+		resetForm();
+	};
 
 	const updateKnownGuest = (index: number, name: string) => {
 		setKnownGuests((currentGuests) =>
@@ -105,10 +126,7 @@ export function CreateInvitationPage() {
 		try {
 			const invitation = await createInvitation(input);
 			setCreatedInvitation(invitation);
-			setStatus('success');
-			notify.success('Invitación creada', {
-				description: 'La invitación se creó correctamente.',
-			});
+			setStatus('idle');
 		} catch {
 			setStatus('error');
 			notify.error('No se pudo crear la invitación', {
@@ -118,15 +136,6 @@ export function CreateInvitationPage() {
 			submittingRef.current = false;
 		}
 	};
-
-	if (status === 'success' && createdInvitation) {
-		return (
-			<CreationSuccess
-				displayName={createdInvitation.displayName}
-				id={createdInvitation.id}
-			/>
-		);
-	}
 
 	const isSubmitting = status === 'submitting';
 	const namedPeopleCount = knownGuests.filter((name) => name.trim()).length;
@@ -243,6 +252,61 @@ export function CreateInvitationPage() {
 					</div>
 				</div>
 			</form>
+
+			{createdInvitation && (
+				<dialog
+					ref={successDialogRef}
+					className="create-invitation-success"
+					aria-labelledby="create-invitation-success-title"
+					aria-describedby="create-invitation-success-description"
+					aria-modal="true"
+					onClose={resetForm}
+					onKeyDown={(event) => {
+						if (event.key === 'Escape') {
+							event.preventDefault();
+							closeSuccessDialog();
+						}
+					}}
+					onCancel={(event) => {
+						event.preventDefault();
+						closeSuccessDialog();
+					}}
+					onClick={(event) => {
+						if (event.target === event.currentTarget) closeSuccessDialog();
+					}}
+				>
+					<div className="create-invitation-success__content">
+						<span className="create-invitation-success__mark" aria-hidden="true">✓</span>
+						<h2 id="create-invitation-success-title">Invitación creada</h2>
+						<p id="create-invitation-success-description">
+							{createdInvitation.displayName} se creó correctamente.
+						</p>
+						<p className="create-invitation-success__code">
+							<span>Código de invitación</span>
+							<strong>{createdInvitation.id}</strong>
+						</p>
+						<div className="create-invitation-success__actions">
+							<ButtonLink
+								variant="primary"
+								to={`/invitaciones/${encodeURIComponent(createdInvitation.id)}`}
+							>
+								Ver invitación
+							</ButtonLink>
+							<Button variant="secondary" type="button" onClick={closeSuccessDialog}>
+								Crear otra invitación
+							</Button>
+						</div>
+						<Button
+							className="create-invitation-success__close"
+							variant="secondary"
+							type="button"
+							onClick={closeSuccessDialog}
+						>
+							Cerrar
+						</Button>
+					</div>
+				</dialog>
+			)}
 		</section>
 	);
 }

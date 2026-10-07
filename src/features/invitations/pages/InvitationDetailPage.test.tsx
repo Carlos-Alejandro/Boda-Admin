@@ -31,10 +31,37 @@ function mount(overrides: Partial<Invitation> = {}) {
   render(<MemoryRouter initialEntries={['/invitaciones/CS7H4K2P']}><Routes><Route path="/invitaciones/:id" element={<InvitationDetailPage />} /></Routes></MemoryRouter>);
   return screen.findByRole('heading', { name: 'Personas (2)' });
 }
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => { vi.clearAllMocks(); localStorage.clear(); });
 afterEach(cleanup);
 
 describe('detalle de la invitación', () => {
+  const cardTitles = () => Array.from(document.querySelectorAll('.invitation-detail__card-slot .invitation-detail__section h2'), (heading) => heading.textContent);
+
+  it('reordena tarjetas con los controles y conserva el orden al volver a abrir', async () => {
+    await mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Mover Personas abajo' }));
+    expect(cardTitles()).toEqual(['Datos de la invitación', 'Personas (2)', 'Administración']);
+    expect(JSON.parse(localStorage.getItem('boda-admin:invitation-detail-card-order:v1') || 'null')).toEqual(['data', 'people', 'admin']);
+    cleanup();
+    await mount();
+    expect(cardTitles()).toEqual(['Datos de la invitación', 'Personas (2)', 'Administración']);
+    expect(screen.getByLabelText('Resumen de la invitación').compareDocumentPosition(screen.getByRole('region', { name: 'Datos de la invitación' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('mueve la tarjeta con el cursor y abre espacio antes de soltarla', async () => {
+    await mount();
+    const slots = Array.from(document.querySelectorAll<HTMLElement>('.invitation-detail__card-slot'));
+    slots.forEach((slot, index) => vi.spyOn(slot, 'getBoundingClientRect').mockReturnValue({ top: index * 116, bottom: index * 116 + 100, height: 100 } as DOMRect));
+    const admin = screen.getByRole('region', { name: 'Administración' });
+    fireEvent.pointerDown(admin, { pointerId: 1, pointerType: 'mouse', button: 0, clientY: 282 });
+    fireEvent.pointerMove(admin.parentElement as HTMLElement, { pointerId: 1, pointerType: 'mouse', clientY: 20 });
+    expect(admin.parentElement?.classList.contains('is-dragging')).toBe(true);
+    expect(screen.getByRole('region', { name: 'Personas (2)' }).parentElement?.classList.contains('is-drop-before')).toBe(true);
+    fireEvent.pointerUp(admin.parentElement as HTMLElement, { pointerId: 1, pointerType: 'mouse', clientY: 20 });
+    expect(cardTitles()).toEqual(['Administración', 'Personas (2)', 'Datos de la invitación']);
+    expect(screen.getByLabelText('Resumen de la invitación').compareDocumentPosition(admin) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it.each([
     ['pending', 'Pendiente'], ['confirmed', 'Confirmada'], ['declined', 'Declinada'], ['partial', 'Parcial'],
   ] as const)('muestra el RSVP %s una sola vez', async (rsvpStatus, label) => {

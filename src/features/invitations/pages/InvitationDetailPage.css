@@ -22,9 +22,27 @@
 .invitation-detail__overview span { color: var(--text-muted); font-size: .78rem; font-weight: 700; }
 .invitation-detail__overview strong { color: var(--green-950); font: 500 clamp(1.65rem, 2.3vw, 2.15rem)/1.2 var(--font-admin-serif); }
 .invitation-detail__overview small { color: var(--text-muted); font-size: .74rem; }
+.invitation-detail__reorder-help { margin: -.25rem 0 .3rem; color: var(--text-muted); font-size: .78rem; }
 
 .invitation-detail__section { position: relative; min-width: 0; margin-top: 1rem; padding: clamp(1rem, 1.8vw, 1.55rem); border: 1px solid #e5ded0; border-radius: .7rem; background: rgba(255, 254, 250, .92); box-shadow: 0 .5rem 1.6rem rgba(34, 54, 45, .035); }
 .invitation-detail__section-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-width: 0; padding-bottom: 1rem; border-bottom: 1px solid #eee8dc; }
+.invitation-detail__section-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: end; gap: .65rem 1rem; }
+.invitation-detail__card-list { display: grid; gap: 1rem; margin-top: 1rem; }
+.invitation-detail__card-list .invitation-detail__section { margin-top: 0; }
+.invitation-detail__card-slot { transition: transform .24s cubic-bezier(.22, 1, .36, 1); }
+.invitation-detail__card-slot .invitation-detail__section-heading { cursor: grab; }
+.invitation-detail__card-slot.is-dragging .invitation-detail__section-heading { cursor: grabbing; }
+.invitation-detail__order-controls { display: inline-flex; align-items: center; gap: .25rem; padding-left: .7rem; border-left: 1px solid var(--border); color: var(--text-muted); }
+.invitation-detail__drag-grip { padding: 0 .25rem; color: #86958b; font-size: 1.25rem; line-height: 1; user-select: none; }
+.invitation-detail__order-controls button { display: grid; width: 2rem; height: 2rem; place-items: center; border: 1px solid transparent; border-radius: .4rem; background: transparent; color: var(--green-700); font-size: 1.05rem; line-height: 1; cursor: pointer; transition: border-color .18s ease, background-color .18s ease, transform .18s ease; }
+.invitation-detail__order-controls button:hover:not(:disabled) { border-color: var(--border); background: var(--green-100); transform: translateY(-1px); }
+.invitation-detail__order-controls button:disabled { opacity: .35; cursor: not-allowed; }
+.invitation-detail__card-slot { position: relative; }
+.invitation-detail__card-slot.is-dragging { z-index: 5; opacity: .97; transition: none; will-change: transform; }
+.invitation-detail__card-slot.is-dragging .invitation-detail__section { border-color: #c9b388; box-shadow: 0 1.2rem 2.5rem rgba(29, 54, 38, .18); transform: scale(1.008); }
+.invitation-detail__card-slot.is-drop-target::before { position: absolute; z-index: 4; top: -.55rem; right: .3rem; left: .3rem; height: 3px; border-radius: 999px; background: var(--gold); content: ""; }
+.invitation-detail__card-slot.is-drop-after::before { top: auto; bottom: -.55rem; }
+.invitation-detail__card-slot.is-drop-target .invitation-detail__section { border-color: var(--gold); box-shadow: 0 .9rem 1.8rem rgba(169, 132, 69, .13); }
 .invitation-detail__section-intro { display: flex; align-items: center; min-width: 0; gap: .8rem; }
 .invitation-detail__section-icon { display: grid; flex: 0 0 2.7rem; width: 2.7rem; height: 2.7rem; place-items: center; border-radius: 50%; background: var(--green-100); color: var(--green-700); }
 .invitation-detail__section-icon svg { width: 1.35rem; height: 1.35rem; }
@@ -81,9 +99,9 @@
 .invitation-detail__overview > div:nth-child(1) { animation-delay: .12s; }
 .invitation-detail__overview > div:nth-child(2) { animation-delay: .18s; }
 .invitation-detail__overview > div:nth-child(3) { animation-delay: .24s; }
-.invitation-detail__section:nth-of-type(1) { animation-delay: .3s; }
-.invitation-detail__section:nth-of-type(2) { animation-delay: .36s; }
-.invitation-detail__section:nth-of-type(3) { animation-delay: .42s; }
+.invitation-detail__card-slot--1 .invitation-detail__section { animation-delay: .3s; }
+.invitation-detail__card-slot--2 .invitation-detail__section { animation-delay: .36s; }
+.invitation-detail__card-slot--3 .invitation-detail__section { animation-delay: .42s; }
 .invitation-detail__overview > div:hover,
 .invitation-detail__section:hover { border-color: #d8d3c6; box-shadow: 0 .9rem 1.8rem rgba(29, 54, 38, .08); transform: translateY(-2px); }
 .invitation-detail__section:hover,
@@ -124,6 +142,7 @@
   .invitation-detail__header { align-items: flex-start; flex-direction: column; gap: 1rem; }
   .invitation-detail__header-actions { justify-content: start; }
   .invitation-detail__section-heading { align-items: flex-start; flex-direction: column; }
+  .invitation-detail__section-actions { width: 100%; justify-content: space-between; }
   .invitation-detail__places { justify-content: start; margin-left: 3.5rem; }
 }
 @container (max-width: 32rem) {
@@ -152,6 +171,7 @@
   .invitation-detail__person:hover .invitation-detail__person-number,
   .invitation-detail__header-actions button:hover,
   .invitation-detail__archive button:hover,
+  .invitation-detail__order-controls button:hover,
   .invitation-detail__menu-trigger:hover,
   .invitation-detail__menu-trigger[aria-expanded="true"] { transform: none; }
 }
