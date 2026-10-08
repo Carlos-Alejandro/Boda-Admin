@@ -10,6 +10,9 @@ import type { Invitation } from '../model/invitation.types';
 import { CreateInvitationPage } from './CreateInvitationPage';
 import { invitation } from '../../../../tests/dashboardTestSupport';
 
+vi.hoisted(() => { vi.stubEnv('VITE_API_BASE_URL', 'https://api.test'); });
+vi.mock('../../../config/firebase', () => ({ auth: { currentUser: null } }));
+
 if (typeof HTMLDialogElement !== 'undefined') {
 	if (!HTMLDialogElement.prototype.showModal) {
 		HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
