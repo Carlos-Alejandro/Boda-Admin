@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useLayoutEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Toaster, ToastBar, type Toast, useToasterStore } from 'react-hot-toast';
 
 import { NOTIFICATION_DURATIONS } from './notificationConfig';
@@ -40,7 +41,7 @@ export function AdminToaster() {
 		}
 	}, [toasts]);
 
-	return (
+	return createPortal((
 		<div ref={toasterLayer} className="admin-toaster-layer" popover="manual">
 			<Toaster
 				position="top-right"
@@ -80,5 +81,5 @@ export function AdminToaster() {
 				)}
 			</Toaster>
 		</div>
-	);
+	), document.body);
 }

@@ -22,6 +22,7 @@ function toast(type: ToastType, duration: number): Toast {
 
 afterEach(() => {
 	cleanup();
+	document.getElementById('root')?.remove();
 	vi.unstubAllGlobals();
 });
 
@@ -43,7 +44,8 @@ describe('notificaciones globales', () => {
 
 	it('mantiene una única raíz Toaster configurada', () => {
 		const { container } = render(<AdminToaster />);
-		expect(container.querySelectorAll('[data-rht-toaster]')).toHaveLength(1);
+		expect(document.body.querySelectorAll('[data-rht-toaster]')).toHaveLength(1);
+		expect(container.querySelectorAll('[data-rht-toaster]')).toHaveLength(0);
 	});
 
 	it('eleva el toaster mientras hay notificaciones y lo oculta al descartarlas', async () => {
@@ -57,11 +59,20 @@ describe('notificaciones globales', () => {
 
 		try {
 			const { container } = render(<AdminToaster />);
-			const layer = container.querySelector('.admin-toaster-layer');
+			const layer = document.body.querySelector('.admin-toaster-layer');
+			expect(layer?.parentElement).toBe(document.body);
 			expect(layer?.getAttribute('popover')).toBe('manual');
+			const appRoot = document.createElement('div');
+			appRoot.id = 'root';
+			document.body.append(appRoot);
+			appRoot.inert = true;
 
-			const id = toastApi.success('Enlace copiado', { duration: Number.POSITIVE_INFINITY });
+			const id = toastApi.success(<><strong>Invitación archivada</strong><span>La invitación se archivó correctamente</span><i className="admin-toast__time-remaining" /></>, { duration: Number.POSITIVE_INFINITY });
 			await waitFor(() => expect(showPopover).toHaveBeenCalledTimes(1));
+			expect(document.body.textContent).toContain('Invitación archivada');
+			expect(appRoot.contains(layer)).toBe(false);
+			expect(document.body.querySelector('.admin-toast__time-remaining')).toBeTruthy();
+			expect(container.querySelector('.admin-toaster-layer')).toBeNull();
 
 			toastApi.dismiss(id);
 			await waitFor(() => expect(hidePopover).toHaveBeenCalledTimes(1));

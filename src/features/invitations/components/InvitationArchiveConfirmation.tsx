@@ -52,7 +52,7 @@ export function InvitationArchiveConfirmation({ invitation, onCancel, onSaved, o
 			const updated = await (restoring ? restoreInvitation(invitation.id) : archiveInvitation(invitation.id));
 			if (mounted.current) {
 				notify.success(restoring ? 'Invitación restaurada' : 'Invitación archivada', {
-					description: restoring ? 'La invitación volvió a estar activa.' : 'La invitación dejó de estar disponible para el invitado.',
+					description: restoring ? 'La invitación se restauró correctamente' : 'La invitación se archivó correctamente',
 				});
 				onSaved(updated);
 			}

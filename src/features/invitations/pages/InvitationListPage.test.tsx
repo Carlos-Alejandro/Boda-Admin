@@ -203,7 +203,9 @@ describe('listado de invitaciones', () => {
 		await waitFor(() => expect(archiveInvitation).toHaveBeenCalledWith('ACT-1'));
 		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ search: undefined, rsvpStatus: undefined, archived: false, page: 1, pageSize: 15 }));
 		await waitFor(() => expect(screen.queryByRole('table')).toBeNull());
-		expect(notify.success).toHaveBeenCalledWith('Invitación archivada', expect.any(Object));
+		expect(notify.success).toHaveBeenCalledTimes(1);
+		expect(vi.mocked(archiveInvitation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(notify.success).mock.invocationCallOrder[0]);
+		expect(notify.success).toHaveBeenCalledWith('Invitación archivada', { description: 'La invitación se archivó correctamente' });
 	});
 
 	it('restaura desde Archivadas y elimina el registro de esa lista', async () => {
@@ -222,7 +224,23 @@ describe('listado de invitaciones', () => {
 		await waitFor(() => expect(restoreInvitation).toHaveBeenCalledWith('ARCH-2'));
 		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ search: undefined, rsvpStatus: undefined, archived: true, page: 1, pageSize: 15 }));
 		await waitFor(() => expect(screen.queryByRole('table')).toBeNull());
-		expect(notify.success).toHaveBeenCalledWith('Invitación restaurada', expect.any(Object));
+		expect(notify.success).toHaveBeenCalledTimes(1);
+		expect(vi.mocked(restoreInvitation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(notify.success).mock.invocationCallOrder[0]);
+		expect(notify.success).toHaveBeenCalledWith('Invitación restaurada', { description: 'La invitación se restauró correctamente' });
+	});
+
+	it.each([
+		{ operation: 'archive' as const, activeView: true, invitation: active, button: 'Archivar invitación: Familia Rivera', confirm: 'Confirmar archivo', service: archiveInvitation, title: 'No se pudo archivar la invitación' },
+		{ operation: 'restore' as const, archivedView: true, invitation: archived, button: 'Restaurar invitación: Familia Archivo', confirm: 'Confirmar restauración', service: restoreInvitation, title: 'No se pudo restaurar la invitación' },
+	])('notifica el error cuando falla la operación de $operation', async ({ activeView, archivedView, invitation: rowInvitation, button, confirm, service, title }) => {
+		vi.mocked(service).mockRejectedValueOnce(new Error('offline'));
+		mount({ items: [rowInvitation], activeView, archivedView });
+		const table = await ready(archivedView ? 'Listado de invitaciones archivadas' : 'Listado de invitaciones');
+		fireEvent.click(within(table).getByRole('button', { name: button }));
+		fireEvent.click(await screen.findByRole('button', { name: confirm }));
+		await waitFor(() => expect(notify.error).toHaveBeenCalledTimes(1));
+		expect(notify.error).toHaveBeenCalledWith(title, { description: 'Revisa el estado de la invitación e inténtalo nuevamente.' });
+		expect(notify.success).not.toHaveBeenCalled();
 	});
 
 	it('conserva el diálogo de archivo para fallos y cancela con Escape', async () => {
