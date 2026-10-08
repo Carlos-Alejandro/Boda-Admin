@@ -10,6 +10,7 @@ import type {
 	CreateInvitationInput,
 	Invitation,
 } from '../model/invitation.types';
+import { getPublicInvitationUrl } from '../model/publicInvitationUrl';
 import './CreateInvitationPage.css';
 
 type FormStatus = 'idle' | 'submitting' | 'error';
@@ -53,6 +54,21 @@ export function CreateInvitationPage() {
 		const dialog = successDialogRef.current;
 		if (dialog?.open) dialog.close();
 		resetForm();
+	};
+
+	const copyInvitationLink = async () => {
+		if (!createdInvitation) return;
+
+		try {
+			await navigator.clipboard.writeText(getPublicInvitationUrl(createdInvitation.id));
+			notify.success('Enlace copiado', {
+				description: `Puedes compartir la invitación de ${createdInvitation.displayName}.`,
+			});
+		} catch {
+			notify.error('No se pudo copiar el enlace', {
+				description: 'Inténtalo nuevamente.',
+			});
+		}
 	};
 
 	const updateKnownGuest = (index: number, name: string) => {
@@ -292,6 +308,13 @@ export function CreateInvitationPage() {
 							>
 								Ver invitación
 							</ButtonLink>
+							<Button variant="secondary" type="button" onClick={() => void copyInvitationLink()}>
+								<svg className="mr-2 h-4 w-4" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+									<rect x="8" y="8" width="12" height="12" rx="2" />
+									<path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+								</svg>
+								Copiar enlace
+							</Button>
 							<Button variant="secondary" type="button" onClick={closeSuccessDialog}>
 								Crear otra invitación
 							</Button>

@@ -50,7 +50,10 @@ const mountWithDetailRoute = () => render(
 
 describe('feedback al crear una invitación', () => {
 	beforeEach(() => vi.clearAllMocks());
-	afterEach(cleanup);
+	afterEach(() => {
+		cleanup();
+		vi.unstubAllEnvs();
+	});
 
 	it('mantiene las validaciones de campos inline y no las convierte en toast', () => {
 		mount();
@@ -142,6 +145,46 @@ describe('feedback al crear una invitación', () => {
 		await screen.findByRole('dialog', { name: 'Invitación creada' });
 		fireEvent.click(screen.getByRole('link', { name: 'Ver invitación' }));
 		expect((await screen.findByTestId('current-path')).textContent).toBe('/invitaciones/ABC12345');
+	});
+
+	it('copia el enlace público de la invitación creada y confirma el éxito', async () => {
+		vi.stubEnv('VITE_PUBLIC_INVITATION_BASE_URL', 'https://wedding.test/');
+		const writeText = vi.fn().mockResolvedValue(undefined);
+		Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+		vi.mocked(createInvitation).mockResolvedValue(invitation('ABC12345', { displayName: 'Familia Ruiz' }));
+		mount();
+		fireEvent.change(screen.getByRole('textbox', { name: 'Nombre de la invitación' }), { target: { value: 'Familia Ruiz' } });
+		fireEvent.change(screen.getByRole('spinbutton', { name: 'Lugares adicionales' }), { target: { value: '1' } });
+		fireEvent.click(screen.getByRole('button', { name: 'Crear invitación' }));
+		await screen.findByRole('dialog', { name: 'Invitación creada' });
+
+		fireEvent.click(screen.getByRole('button', { name: 'Copiar enlace' }));
+
+		await waitFor(() => expect(writeText).toHaveBeenCalledWith('https://wedding.test/invitacion/ABC12345'));
+		expect(notify.success).toHaveBeenCalledWith('Enlace copiado', {
+			description: 'Puedes compartir la invitación de Familia Ruiz.',
+		});
+		expect(screen.getByRole('dialog', { name: 'Invitación creada' })).toBeTruthy();
+	});
+
+	it('informa si falla la copia sin cerrar el modal', async () => {
+		vi.stubEnv('VITE_PUBLIC_INVITATION_BASE_URL', 'https://wedding.test');
+		const writeText = vi.fn().mockRejectedValue(new Error('clipboard blocked'));
+		Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+		vi.mocked(createInvitation).mockResolvedValue(invitation('ABC12345', { displayName: 'Familia Ruiz' }));
+		mount();
+		fireEvent.change(screen.getByRole('textbox', { name: 'Nombre de la invitación' }), { target: { value: 'Familia Ruiz' } });
+		fireEvent.change(screen.getByRole('spinbutton', { name: 'Lugares adicionales' }), { target: { value: '1' } });
+		fireEvent.click(screen.getByRole('button', { name: 'Crear invitación' }));
+		await screen.findByRole('dialog', { name: 'Invitación creada' });
+
+		fireEvent.click(screen.getByRole('button', { name: 'Copiar enlace' }));
+
+		await waitFor(() => expect(notify.error).toHaveBeenCalledWith('No se pudo copiar el enlace', {
+			description: 'Inténtalo nuevamente.',
+		}));
+		expect(screen.getByRole('dialog', { name: 'Invitación creada' })).toBeTruthy();
+		expect(notify.success).not.toHaveBeenCalled();
 	});
 
 	it('crear otra cierra el diálogo y prepara el formulario sin recargar', async () => {
