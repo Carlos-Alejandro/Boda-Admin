@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button, ButtonLink } from '../../../shared/components/Button/Button';
 import { PageHeader } from '../../../shared/components/PageHeader/PageHeader';
@@ -6,12 +7,21 @@ import { useViewportPopover } from '../../../shared/hooks/useViewportPopover';
 import { getInvitations } from '../api/invitationService';
 import { InvitationFilters } from '../components/InvitationFilters';
 import { InvitationList } from '../components/InvitationList';
-import type { Invitation, InvitationListResponse, RsvpStatus } from '../model/invitation.types';
+import type { Invitation, InvitationListResponse, InvitationScope, RsvpStatus } from '../model/invitation.types';
 import './InvitationListPage.css';
 
 const filtersId = 'invitation-list-filters';
 const filtersTitleId = 'invitation-list-filters-title';
 const pageSize = 15;
+function scopeFromRoute(pathname: string, search: string, archivedView: boolean): InvitationScope {
+	if (archivedView || pathname === '/invitaciones/archivadas') return 'archived';
+	return new URLSearchParams(search).get('estado') === 'activas' ? 'active' : 'all';
+}
+
+function pathForScope(scope: InvitationScope) {
+	if (scope === 'archived') return '/invitaciones/archivadas';
+	return scope === 'active' ? '/invitaciones?estado=activas' : '/invitaciones';
+}
 
 function paginationItems(current: number, total: number): Array<number | 'ellipsis-start' | 'ellipsis-end'> {
 	if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
@@ -34,11 +44,11 @@ function InvitationListSkeleton() {
 			<span className="visually-hidden">Cargando invitaciones...</span>
 			<div className="invitation-skeleton__visual" aria-hidden="true">
 				<div className="invitation-skeleton__header">
-					{Array.from({ length: 7 }, (_, index) => <span key={index} />)}
+					{Array.from({ length: 6 }, (_, index) => <span key={index} />)}
 				</div>
 				{Array.from({ length: 5 }, (_, row) => (
 					<div className="invitation-skeleton__row" key={row}>
-						{Array.from({ length: 7 }, (_, cell) => (
+						{Array.from({ length: 6 }, (_, cell) => (
 							<span className={`invitation-skeleton__cell invitation-skeleton__cell--${cell + 1}`} key={cell}>
 								<i />
 								{cell === 0 && <i />}
@@ -52,13 +62,14 @@ function InvitationListSkeleton() {
 }
 
 interface InvitationEmptyStateProps {
+	scope: InvitationScope;
 	hasSearch: boolean;
 	hasAppliedFilters: boolean;
 	onClearFilters: () => void;
 	onClearSearch: () => void;
 }
 
-function InvitationEmptyState({ hasSearch, hasAppliedFilters, onClearFilters, onClearSearch }: InvitationEmptyStateProps) {
+function InvitationEmptyState({ scope, hasSearch, hasAppliedFilters, onClearFilters, onClearSearch }: InvitationEmptyStateProps) {
 	const constrained = hasSearch || hasAppliedFilters;
 	return (
 		<section className="invitation-empty" aria-labelledby="invitation-empty-title">
@@ -66,13 +77,14 @@ function InvitationEmptyState({ hasSearch, hasAppliedFilters, onClearFilters, on
 				<svg viewBox="0 0 24 24"><path d="M4 6.5h16v11H4z" /><path d="m4.5 7 7.5 6 7.5-6" /></svg>
 			</span>
 			<div role="status">
-				<h2 id="invitation-empty-title">{constrained ? 'No encontramos invitaciones' : 'Aún no hay invitaciones'}</h2>
-				<p>{constrained ? 'Prueba con otra búsqueda o ajusta los filtros aplicados.' : 'Crea tu primera invitación o impórtalas desde Excel.'}</p>
+				<h2 id="invitation-empty-title">{constrained ? 'No encontramos invitaciones' : scope === 'archived' ? 'No hay invitaciones archivadas' : scope === 'active' ? 'Aún no hay invitaciones activas' : 'Aún no hay invitaciones'}</h2>
+				<p>{constrained ? 'Prueba con otra búsqueda o ajusta los filtros aplicados.' : scope === 'archived' ? 'Las invitaciones que archives aparecerán aquí.' : 'Crea tu primera invitación o impórtalas desde Excel.'}</p>
 			</div>
 			<div className="invitation-empty__actions">
 				{hasAppliedFilters && <Button variant="secondary" type="button" onClick={onClearFilters}>Limpiar filtros</Button>}
 				{hasSearch && <Button variant="secondary" type="button" onClick={onClearSearch}>Limpiar búsqueda</Button>}
-				{!constrained && (
+				{scope === 'archived' && !constrained && <ButtonLink variant="secondary" to="/invitaciones">Ver todas las invitaciones</ButtonLink>}
+				{scope !== 'archived' && !constrained && (
 					<>
 						<ButtonLink variant="primary" to="/invitaciones/nueva">Nueva invitación</ButtonLink>
 						<ButtonLink variant="secondary" to="/invitaciones/importar">Importar Excel</ButtonLink>
@@ -83,15 +95,24 @@ function InvitationEmptyState({ hasSearch, hasAppliedFilters, onClearFilters, on
 	);
 }
 
-export function InvitationListPage() {
+export function InvitationListPage({ archivedView = false }: { archivedView?: boolean }) {
+	const location = useLocation();
+	const navigate = useNavigate();
+	const scope = scopeFromRoute(location.pathname, location.search, archivedView);
 	const [response, setResponse] = useState<InvitationListResponse | null>(null);
 	const [search, setSearch] = useState('');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
 	const [rsvpStatus, setRsvpStatus] = useState<RsvpStatus | ''>('');
-	const [archived, setArchived] = useState<boolean | undefined>();
-	const [page, setPage] = useState(1);
+	const [draftScopeState, setDraftScopeState] = useState({ routeScope: scope, value: scope });
+	const [pageState, setPageState] = useState({ scope, value: 1 });
+	const draftInvitationScope = draftScopeState.routeScope === scope ? draftScopeState.value : scope;
+	const page = pageState.scope === scope ? pageState.value : 1;
+	const setDraftInvitationScope = useCallback((value: InvitationScope) => setDraftScopeState({ routeScope: scope, value }), [scope]);
+	const setPage = useCallback((value: SetStateAction<number>) => setPageState((current) => ({
+		scope,
+		value: typeof value === 'function' ? value(current.scope === scope ? current.value : 1) : value,
+	})), [scope]);
 	const [draftRsvpStatus, setDraftRsvpStatus] = useState<RsvpStatus | ''>('');
-	const [draftArchived, setDraftArchived] = useState<boolean | undefined>();
 	const [filtersOpen, setFiltersOpen] = useState(false);
 	const [refreshToken, setRefreshToken] = useState(0);
 	const [loading, setLoading] = useState(true);
@@ -100,6 +121,7 @@ export function InvitationListPage() {
 	const filterControl = useRef<HTMLDivElement>(null);
 	const filterPanel = useRef<HTMLDivElement>(null);
 	const filterSpace = useViewportPopover(filtersOpen, filterControl, filterPanel);
+	const isArchivedView = scope === 'archived';
 
 	useEffect(() => {
 		const timeout = window.setTimeout(() => {
@@ -107,7 +129,7 @@ export function InvitationListPage() {
 			setPage(1);
 		}, 400);
 		return () => window.clearTimeout(timeout);
-	}, [search]);
+	}, [search, setPage]);
 
 	useEffect(() => {
 		const requestId = ++requestSequence.current;
@@ -119,7 +141,7 @@ export function InvitationListPage() {
 				const invitationList = await getInvitations({
 					search: debouncedSearch || undefined,
 					rsvpStatus: rsvpStatus || undefined,
-					archived,
+					archived: scope === 'all' ? undefined : scope === 'archived',
 					page,
 					pageSize,
 				});
@@ -136,13 +158,13 @@ export function InvitationListPage() {
 
 		void loadInvitations();
 		return () => { requestSequence.current += 1; };
-	}, [archived, debouncedSearch, page, refreshToken, rsvpStatus]);
+	}, [scope, debouncedSearch, page, refreshToken, rsvpStatus, setPage]);
 
 	useEffect(() => {
 		if (!filtersOpen) return;
 		const discardAndClose = () => {
 			setDraftRsvpStatus(rsvpStatus);
-			setDraftArchived(archived);
+			setDraftInvitationScope(scope);
 			setFiltersOpen(false);
 		};
 		const closeOnOutsideClick = (event: MouseEvent) => {
@@ -160,28 +182,28 @@ export function InvitationListPage() {
 			document.removeEventListener('mousedown', closeOnOutsideClick);
 			document.removeEventListener('keydown', closeOnEscape);
 		};
-	}, [archived, filtersOpen, rsvpStatus]);
+	}, [filtersOpen, rsvpStatus, scope, setDraftInvitationScope]);
 
-	const hasAppliedFilters = rsvpStatus !== '' || archived !== undefined;
-	const appliedFilterCount = Number(rsvpStatus !== '') + Number(archived !== undefined);
-	const hasDraftChanges = draftRsvpStatus !== rsvpStatus || draftArchived !== archived;
+	const hasAppliedFilters = rsvpStatus !== '' || scope !== 'all';
+	const appliedFilterCount = Number(rsvpStatus !== '') + Number(scope !== 'all');
+	const hasDraftChanges = draftRsvpStatus !== rsvpStatus || draftInvitationScope !== scope;
 
 	const toggleFilters = () => {
 		if (filtersOpen) {
 			setDraftRsvpStatus(rsvpStatus);
-			setDraftArchived(archived);
+			setDraftInvitationScope(scope);
 			setFiltersOpen(false);
 			return;
 		}
 		setDraftRsvpStatus(rsvpStatus);
-		setDraftArchived(archived);
+		setDraftInvitationScope(scope);
 		setFiltersOpen(true);
 	};
 
 	const applyFilters = () => {
 		if (!hasDraftChanges) return;
 		setRsvpStatus(draftRsvpStatus);
-		setArchived(draftArchived);
+		if (draftInvitationScope !== scope) navigate(pathForScope(draftInvitationScope));
 		setPage(1);
 		setFiltersOpen(false);
 	};
@@ -189,9 +211,9 @@ export function InvitationListPage() {
 	const clearFilters = () => {
 		if (!hasAppliedFilters) return;
 		setRsvpStatus('');
-		setArchived(undefined);
 		setDraftRsvpStatus('');
-		setDraftArchived(undefined);
+		setDraftInvitationScope('all');
+		if (scope !== 'all') navigate(pathForScope('all'));
 		setPage(1);
 		setFiltersOpen(false);
 	};
@@ -206,8 +228,7 @@ export function InvitationListPage() {
 		setResponse((current) => {
 			if (!current) return current;
 			const existing = current.items.some((item) => item.id === updated.id);
-			const remainsInArchiveFilter = archived === undefined || updated.isArchived === archived;
-			if (!remainsInArchiveFilter) {
+			if (scope !== 'all' && updated.isArchived !== (scope === 'archived')) {
 				return {
 					items: current.items.filter((item) => item.id !== updated.id),
 					total: existing ? Math.max(0, current.total - 1) : current.total,
@@ -229,9 +250,9 @@ export function InvitationListPage() {
 		<section className="invitation-list-page" aria-labelledby="invitations-title">
 			<PageHeader
 				className="invitation-page-header"
-				title="Invitaciones"
+				title={isArchivedView ? 'Invitaciones archivadas' : 'Invitaciones'}
 				titleId="invitations-title"
-				description="Administra, busca y gestiona las invitaciones de tu boda."
+				description={isArchivedView ? 'Aquí se muestran las invitaciones archivadas. Puedes restaurarlas cuando lo necesites.' : 'Administra, busca y gestiona las invitaciones de tu boda.'}
 			/>
 
 			<div className="invitation-toolbar" aria-label="Herramientas de invitaciones">
@@ -273,32 +294,30 @@ export function InvitationListPage() {
 						<p className="invitation-filter-panel__title" id={filtersTitleId}>Filtrar invitaciones</p>
 						<InvitationFilters
 							rsvpStatus={draftRsvpStatus}
-							archived={draftArchived}
+							invitationScope={draftInvitationScope}
 							hasAppliedFilters={hasAppliedFilters}
 							hasDraftChanges={hasDraftChanges}
 							onRsvpStatusChange={(event) => setDraftRsvpStatus(event.target.value as RsvpStatus | '')}
-							onArchivedChange={(event) => {
-								const value = event.target.value;
-								setDraftArchived(value === '' ? undefined : value === 'true');
-							}}
+							onInvitationScopeChange={(event) => setDraftInvitationScope(event.target.value as InvitationScope)}
 							onApply={applyFilters}
 							onClear={clearFilters}
 						/>
 					</div>
 				</div>
-				<ButtonLink className="invitation-toolbar__import" variant="secondary" to="/invitaciones/importar">
+				{!isArchivedView && <ButtonLink className="invitation-toolbar__import" variant="secondary" to="/invitaciones/importar">
 					<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 15V4m0 0L8 8m4-4 4 4M5 14v5h14v-5" /></svg>
 					Importar Excel
-				</ButtonLink>
-				<ButtonLink className="invitation-toolbar__create" variant="primary" to="/invitaciones/nueva">
+				</ButtonLink>}
+				{!isArchivedView && <ButtonLink className="invitation-toolbar__create" variant="primary" to="/invitaciones/nueva">
 					<span aria-hidden="true">＋</span> Nueva invitación
-				</ButtonLink>
+				</ButtonLink>}
 			</div>
 
 			{loading && <InvitationListSkeleton />}
 			{!loading && (error || !response) && <p role="alert" className="invitation-list-state invitation-list-state--error">No fue posible cargar las invitaciones.</p>}
 			{!loading && !error && response?.items.length === 0 && (
 				<InvitationEmptyState
+					scope={scope}
 					hasSearch={search.trim() !== ''}
 					hasAppliedFilters={hasAppliedFilters}
 					onClearFilters={clearFilters}
@@ -309,6 +328,7 @@ export function InvitationListPage() {
 				<InvitationList
 					items={response.items}
 					search={debouncedSearch}
+					scope={scope}
 					onInvitationChanged={updateInvitation}
 					onReloadRequested={() => setRefreshToken((token) => token + 1)}
 				/>

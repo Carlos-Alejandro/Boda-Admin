@@ -21,6 +21,7 @@ function mount(path = '/') {
 					<Route element={<AdminLayout />}>
 						<Route path="/" element={<p>Dashboard actual</p>} />
 						<Route path="/invitaciones" element={<p>Listado actual</p>} />
+						<Route path="/invitaciones/archivadas" element={<p>Archivadas actuales</p>} />
 						<Route path="/invitaciones/nueva" element={<p>Formulario actual</p>} />
 						<Route path="/invitaciones/importar" element={<p>Importador actual</p>} />
 						<Route path="/invitaciones/:id" element={<p>Detalle actual</p>} />
@@ -209,5 +210,23 @@ describe('navegación responsive del Admin', () => {
 		expect(screen.queryByRole('dialog')).toBeNull();
 		expect(document.body.style.overflow).toBe('');
 		expect(screen.getByRole('navigation', { name: 'Navegación principal' })).toBeTruthy();
+	});
+
+	it('mantiene Todas activa en la ruta de archivadas sin mostrar un enlace duplicado', () => {
+		mount('/invitaciones/archivadas');
+		const nav = screen.getByRole('navigation', { name: 'Navegación principal' });
+		expect(within(nav).queryByRole('link', { name: 'Archivadas' })).toBeNull();
+		expect(within(nav).getAllByRole('link').map((link) => link.textContent?.trim())).toEqual([
+			'Dashboard', 'Todas', 'Nueva invitación', 'Importar',
+		]);
+		expect(within(nav).getByRole('link', { name: 'Todas' }).className).toContain('admin-sidebar__link--active');
+		expect(screen.getByRole('main').textContent).toContain('Archivadas actuales');
+	});
+
+	it('mantiene Todas seleccionada para el filtro de invitaciones activas', () => {
+		mount('/invitaciones?estado=activas');
+		const nav = screen.getByRole('navigation', { name: 'Navegación principal' });
+		expect(within(nav).getByRole('link', { name: 'Todas' }).className).toContain('admin-sidebar__link--active');
+		expect(within(nav).queryByRole('link', { name: 'Archivadas' })).toBeNull();
 	});
 });

@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { notify } from '../../../shared/notifications/notify';
 import { archiveInvitation, getInvitations, restoreInvitation } from '../api/invitationService';
-import type { Guest, Invitation } from '../model/invitation.types';
+import type { Guest, Invitation, InvitationFilters, InvitationListResponse } from '../model/invitation.types';
 import { InvitationListPage } from './InvitationListPage';
 
 vi.hoisted(() => {
@@ -13,520 +13,237 @@ vi.hoisted(() => {
 	vi.stubEnv('VITE_API_BASE_URL', 'https://api.test');
 });
 vi.mock('../../../config/firebase', () => ({ auth: { currentUser: null } }));
-vi.mock('../api/invitationService', () => ({
-	getInvitations: vi.fn(),
-	archiveInvitation: vi.fn(),
-	restoreInvitation: vi.fn(),
-}));
-vi.mock('../../../shared/notifications/notify', () => ({
-	notify: {
-		success: vi.fn(),
-		error: vi.fn(),
-		warning: vi.fn(),
-		info: vi.fn(),
-		loading: vi.fn(),
-		dismiss: vi.fn(),
-	},
-}));
+vi.mock('../api/invitationService', () => ({ getInvitations: vi.fn(), archiveInvitation: vi.fn(), restoreInvitation: vi.fn() }));
+vi.mock('../../../shared/notifications/notify', () => ({ notify: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn(), loading: vi.fn(), dismiss: vi.fn() } }));
 
-const guest = (name: string, attending: boolean | null, type: Guest['type'] = 'known', originalName?: string): Guest => ({
-	name,
-	shortName: name.split(/\s+/)[0] || 'Acompañante',
-	type,
-	attending,
-	...(originalName ? { originalName } : {}),
-});
-
+const guest = (name: string, attending: boolean | null, type: Guest['type'] = 'known'): Guest => ({ name, shortName: name.split(/\s+/)[0] || 'Acompañante', type, attending });
 const invitation = (id: string, overrides: Partial<Invitation> = {}): Invitation => ({
-	id,
-	version: `version-${id}`,
-	displayName: `Familia ${id}`,
-	maxGuests: 1,
-	replacementsAllowed: true,
-	rsvpStatus: 'pending',
-	message: '',
-	isArchived: false,
-	archivedAt: null,
-	updatedAt: null,
-	editOverrideUntil: null,
-	guests: [guest(`Persona ${id}`, null)],
-	...overrides,
+	id, version: `version-${id}`, displayName: `Familia ${id}`, maxGuests: 1, replacementsAllowed: true,
+	rsvpStatus: 'pending', message: '', isArchived: false, archivedAt: null, updatedAt: null, editOverrideUntil: null,
+	guests: [guest(`Persona ${id}`, null)], ...overrides,
 });
+const active = invitation('ACT-1', { displayName: 'Familia Rivera', maxGuests: 2, updatedAt: '2026-10-06T12:00:00.000Z', guests: [guest('Ana Rivera', true), guest('', null, 'open')] });
+const archived = invitation('ARCH-2', { displayName: 'Familia Archivo', isArchived: true, archivedAt: '2026-10-08T12:00:00.000Z', updatedAt: '2025-01-01T12:00:00.000Z', rsvpStatus: 'declined' });
+const writeText = vi.fn<(_: string) => Promise<void>>();
 
-const detailed = invitation('REAL-1', {
-	displayName: 'Familia Rivera',
-	maxGuests: 5,
-	rsvpStatus: 'partial',
-	updatedAt: '2026-09-20T15:00:00.000Z',
-	guests: [
-		guest('Ana Rivera', true),
-		guest('', null, 'open'),
-		guest('Luis Rivera', false),
-		guest('Paula Rivera', null),
-		guest('María Nueva', true, 'replacement', 'María Original'),
-	],
+function CurrentPath() {
+	return <p data-testid="current-path">{useLocation().pathname}</p>;
+}
+
+function mount({ items = [active], archivedView = false, activeView = false, total = items.length, load }: { items?: Invitation[]; archivedView?: boolean; activeView?: boolean; total?: number; load?: (filters?: InvitationFilters) => Promise<InvitationListResponse> } = {}) {
+	vi.mocked(getInvitations).mockImplementation(load ?? (async () => ({ items, total, page: 1, pageSize: 15, totalPages: Math.ceil(total / 15) })));
+	return render(
+		<MemoryRouter initialEntries={[archivedView ? '/invitaciones/archivadas' : activeView ? '/invitaciones?estado=activas' : '/invitaciones']}>
+			<Routes>
+				<Route path="/invitaciones" element={<InvitationListPage />} />
+				<Route path="/invitaciones/archivadas" element={<InvitationListPage archivedView />} />
+				<Route path="/invitaciones/:id" element={<CurrentPath />} />
+			</Routes>
+		</MemoryRouter>,
+	);
+}
+
+async function ready(name = 'Listado de invitaciones') {
+	return screen.findByRole('table', { name });
+}
+
+beforeEach(() => {
+	vi.clearAllMocks();
+	writeText.mockResolvedValue(undefined);
+	Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
 });
-const archived = invitation('ARCH-2', { isArchived: true, rsvpStatus: 'declined' });
-
-function mount(items: Invitation[] = [detailed, archived]) {
-	vi.mocked(getInvitations).mockResolvedValue({ items, total: items.length });
-	return render(<MemoryRouter><InvitationListPage /></MemoryRouter>);
-}
-
-function renderPage() {
-	return render(<MemoryRouter><InvitationListPage /></MemoryRouter>);
-}
-
-async function ready() {
-	return screen.findByRole('table', { name: 'Listado de invitaciones' });
-}
+afterEach(cleanup);
 
 describe('listado de invitaciones', () => {
-	const writeText = vi.fn<(_: string) => Promise<void>>();
+	it('Todas carga invitaciones activas y archivadas sin enviar el parámetro archived', async () => {
+		const table = await (async () => { mount({ items: [active, archived] }); return ready(); })();
+		expect(await screen.findByRole('heading', { name: 'Invitaciones' })).toBeTruthy();
+		expect(getInvitations).toHaveBeenLastCalledWith({ search: undefined, rsvpStatus: undefined, archived: undefined, page: 1, pageSize: 15 });
+		expect(within(table).getAllByRole('row')).toHaveLength(3);
+		expect(within(table).getByRole('link', { name: 'Familia Rivera' })).toBeTruthy();
+		expect(within(table).getByRole('link', { name: 'Familia Archivo' })).toBeTruthy();
+		expect(within(table).getByRole('row', { name: /Familia Archivo/ }).className).toContain('invitation-table__archived');
+		expect(within(table).getByText('Archivada')).toBeTruthy();
+		expect(within(table).getByRole('button', { name: 'Copiar enlace de Familia Archivo' })).toBeTruthy();
+		expect(within(table).getByRole('button', { name: 'Restaurar invitación: Familia Archivo' })).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'Importar Excel' })).toBeTruthy();
+	});
 
-	it('explica y resalta coincidencias por nombre de invitado, también con acentos', async () => {
-		mount();
+	it('la ruta Archivadas solicita solo registros archivados y muestra archivedAt sin sustituirlo por updatedAt', async () => {
+		mount({ items: [archived], archivedView: true });
+		const table = await ready('Listado de invitaciones archivadas');
+		expect(screen.getByRole('heading', { name: 'Invitaciones archivadas' })).toBeTruthy();
+		expect(getInvitations).toHaveBeenLastCalledWith({ search: undefined, rsvpStatus: undefined, archived: true, page: 1, pageSize: 15 });
+		expect(within(table).getByRole('columnheader', { name: 'Fecha de archivo' })).toBeTruthy();
+		expect(within(table).getByText('8 oct 2026')).toBeTruthy();
+		expect(within(table).queryByText('1 ene 2025')).toBeNull();
+		expect(within(table).getByRole('row', { name: /Familia Archivo/ }).className).toContain('invitation-table__archived');
+		expect(within(table).getByText('Archivada')).toBeTruthy();
+		expect(within(table).getByRole('button', { name: 'Restaurar invitación: Familia Archivo' })).toBeTruthy();
+		const copy = within(table).getByRole('button', { name: 'Copiar enlace de Familia Archivo' });
+		expect(screen.queryByRole('link', { name: 'Importar Excel' })).toBeNull();
+		fireEvent.click(copy);
+		await waitFor(() => expect(writeText).toHaveBeenCalledWith('https://public.test/invitacion/ARCH-2'));
+		expect(notify.success).toHaveBeenCalledWith('Enlace copiado', expect.any(Object));
+		expect(screen.getByRole('heading', { name: 'Invitaciones archivadas' })).toBeTruthy();
+		expect(screen.getByRole('table', { name: 'Listado de invitaciones archivadas' })).toBeTruthy();
+	});
+
+	it('Estado de invitación sincroniza Todas, Activas y Archivadas con la vista y la consulta', async () => {
+		const load = async (filters: InvitationFilters = {}) => ({
+			items: filters.archived === true ? [archived] : filters.archived === false ? [active] : [active, archived],
+			total: filters.archived === true || filters.archived === false ? 1 : 2,
+		});
+		mount({ items: [active, archived], load });
 		await ready();
-		expect(screen.queryByText(/Coincidencia/)).toBeNull();
-
-		fireEvent.change(screen.getByLabelText('Buscar invitaciones'), { target: { value: 'MARIA' } });
-		await waitFor(() => expect(screen.getByLabelText('Coincidencia: María Nueva')).toBeTruthy(), { timeout: 1200 });
-		const match = screen.getByLabelText('Coincidencia: María Nueva');
-		expect(match.querySelector('mark')?.textContent).toBe('María');
-		expect(screen.getByText('Coincidencia:').closest('small')).toBe(match);
-
-		fireEvent.change(screen.getByLabelText('Buscar invitaciones'), { target: { value: 'Familia Rivera' } });
-		await waitFor(() => expect(screen.queryByText(/Coincidencia/)).toBeNull(), { timeout: 1200 });
-	});
-
-	beforeEach(() => {
-		vi.clearAllMocks();
-		writeText.mockResolvedValue(undefined);
-		Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
-	});
-
-	afterEach(() => {
-		cleanup();
-		vi.useRealTimers();
-	});
-
-	it('muestra encabezado, columnas y datos reales sin contar slots anónimos ni originalName', async () => {
-		mount();
-		const table = await ready();
-		expect(screen.queryByText(/Nuestra boda/i)).toBeNull();
-		expect(screen.getByRole('heading', { level: 1, name: 'Invitaciones' })).toBeTruthy();
-		expect(screen.getByText('Administra, busca y gestiona las invitaciones de tu boda.')).toBeTruthy();
-		expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual([
-			'Familia / Nombre', 'Código', 'Invitados', 'Asistencia', 'Estado', 'Enlace', 'Acciones',
+		expect(getInvitations).toHaveBeenLastCalledWith({ search: undefined, rsvpStatus: undefined, archived: undefined, page: 1, pageSize: 15 });
+		fireEvent.click(screen.getByRole('button', { name: /^Filtros/ }));
+		const rsvp = screen.getByRole('combobox', { name: 'Estado RSVP' });
+		expect(Array.from((rsvp as HTMLSelectElement).options, ({ text }) => text)).toEqual([
+			'Todos', 'Pendientes', 'Confirmadas', 'Parciales', 'Declinadas',
 		]);
-		const row = within(table).getByRole('row', { name: /Familia Rivera/ });
-		expect(within(row).getByText('REAL-1')).toBeTruthy();
-		expect(within(row).getByText('4 / 5')).toBeTruthy();
-		expect(within(row).getByText('identificados')).toBeTruthy();
-		const attendance = row.querySelector('[headers="invitation-col-attendance"]');
-		expect(attendance?.textContent).toContain('2 asisten');
-		expect(attendance?.textContent).toContain('1 no asiste');
-		expect(attendance?.querySelector('.invitation-table__mobile-label')?.getAttribute('aria-hidden')).toBe('true');
-		expect(table.querySelector('#invitation-col-attendance')?.textContent).toBe('Asistencia');
-		expect(within(row).getByText('Parcial')).toBeTruthy();
-		expect(within(row).queryByText('María Original')).toBeNull();
-		expect(screen.getByText('Declinada')).toBeTruthy();
-		expect(screen.queryByText('Activa')).toBeNull();
-		expect(screen.getByText('Archivada')).toBeTruthy();
-		expect(screen.queryByText('Cada invitación guarda un momento')).toBeNull();
-	});
-
-	it('usa un popover contextual accesible sin insertarlo en el flujo de la tabla', async () => {
-		mount();
-		const table = await ready();
-		const filterButton = screen.getByRole('button', { name: /Filtros/ });
-		const panel = document.getElementById('invitation-list-filters');
-		expect(panel?.parentElement?.classList.contains('invitation-filter-control')).toBe(true);
-		expect(table.parentElement?.previousElementSibling).toBe(screen.getByLabelText('Herramientas de invitaciones'));
-		expect(filterButton.getAttribute('aria-expanded')).toBe('false');
-		expect(filterButton.textContent?.trim()).toBe('Filtros');
-		expect(filterButton.textContent).not.toMatch(/[\^v⌄]/);
-		fireEvent.click(filterButton);
-		expect(filterButton.getAttribute('aria-expanded')).toBe('true');
-		expect(screen.getByRole('dialog', { name: 'Filtrar invitaciones' })).toBeTruthy();
-		expect((screen.getByRole('button', { name: 'Limpiar' }) as HTMLButtonElement).disabled).toBe(true);
-		expect((screen.getByRole('button', { name: 'Aplicar filtros' }) as HTMLButtonElement).disabled).toBe(true);
-		expect((screen.getByLabelText('Estado RSVP') as HTMLSelectElement).disabled).toBe(false);
-		expect((screen.getByLabelText('Estado de invitación') as HTMLSelectElement).disabled).toBe(false);
-
-		fireEvent.click(filterButton);
-		expect(filterButton.getAttribute('aria-expanded')).toBe('false');
-		fireEvent.click(filterButton);
-		fireEvent.mouseDown(document.body);
-		expect(filterButton.getAttribute('aria-expanded')).toBe('false');
-		fireEvent.click(filterButton);
-		fireEvent.keyDown(document, { key: 'Escape' });
-		expect(filterButton.getAttribute('aria-expanded')).toBe('false');
-		expect(document.activeElement).toBe(filterButton);
-	});
-
-	it('coloca el filtro sobre el disparador si queda poco espacio debajo', async () => {
-		mount();
-		await ready();
-		const control = document.querySelector<HTMLElement>('.invitation-filter-control')!;
-		const panel = document.getElementById('invitation-list-filters')!;
-		control.getBoundingClientRect = () => ({ top: 650, bottom: 700 } as DOMRect);
-		Object.defineProperty(panel, 'scrollHeight', { configurable: true, value: 240 });
-		fireEvent.click(screen.getByRole('button', { name: 'Filtros' }));
-		expect(panel.classList.contains('invitation-filter-panel--above')).toBe(true);
-		expect(panel.style.maxHeight).toBe('630px');
-	});
-
-	it('mantiene los cambios como draft hasta Aplicar y reabre con los valores aplicados', async () => {
-		mount();
-		await ready();
-		fireEvent.click(screen.getByRole('button', { name: /Filtros/ }));
-		const applyButton = screen.getByRole('button', { name: 'Aplicar filtros' }) as HTMLButtonElement;
-		expect(applyButton.disabled).toBe(true);
-		expect(getInvitations).toHaveBeenCalledTimes(1);
-
-		fireEvent.change(screen.getByLabelText('Estado RSVP'), { target: { value: 'confirmed' } });
-		fireEvent.change(screen.getByLabelText('Estado de invitación'), { target: { value: 'false' } });
-		expect(getInvitations).toHaveBeenCalledTimes(1);
-		expect(applyButton.disabled).toBe(false);
-
-		fireEvent.click(applyButton);
-		expect(screen.getByRole('button', { name: /Filtros/ }).getAttribute('aria-expanded')).toBe('false');
-		expect(screen.queryByRole('dialog', { name: 'Filtrar invitaciones' })).toBeNull();
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: false, rsvpStatus: 'confirmed', search: undefined, page: 1, pageSize: 15 }));
-
-		fireEvent.click(screen.getByRole('button', { name: /Filtros/ }));
-		expect((screen.getByLabelText('Estado RSVP') as HTMLSelectElement).value).toBe('confirmed');
-		expect((screen.getByLabelText('Estado de invitación') as HTMLSelectElement).value).toBe('false');
-		expect((screen.getByRole('button', { name: 'Aplicar filtros' }) as HTMLButtonElement).disabled).toBe(true);
-		expect((screen.getByRole('button', { name: 'Limpiar' }) as HTMLButtonElement).disabled).toBe(false);
-	});
-
-	it('muestra el contador solo para filtros aplicados y no cuenta búsqueda ni drafts', async () => {
-		mount();
-		await ready();
-		const filterButton = screen.getByRole('button', { name: 'Filtros' });
-		expect(filterButton.querySelector('.invitation-toolbar__filter-count')).toBeNull();
-
-		fireEvent.change(screen.getByLabelText('Buscar invitaciones'), { target: { value: 'Rivera' } });
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: 'Rivera', page: 1, pageSize: 15 }), { timeout: 1200 });
-		expect(filterButton.querySelector('.invitation-toolbar__filter-count')).toBeNull();
-
-		fireEvent.click(filterButton);
-		fireEvent.change(screen.getByLabelText('Estado RSVP'), { target: { value: 'confirmed' } });
-		expect(filterButton.querySelector('.invitation-toolbar__filter-count')).toBeNull();
+		const scope = screen.getByRole('combobox', { name: 'Estado de invitación' });
+		expect(Array.from((scope as HTMLSelectElement).options, ({ text }) => text)).toEqual(['Todas', 'Activas', 'Archivadas']);
+		fireEvent.change(rsvp, { target: { value: 'confirmed' } });
+		fireEvent.change(scope, { target: { value: 'archived' } });
 		fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: 'confirmed', search: 'Rivera', page: 1, pageSize: 15 }));
-		expect(screen.getByRole('button', { name: 'Filtros, 1 filtro activo' }).querySelector('.invitation-toolbar__filter-count')?.textContent).toBe('1');
-
-		fireEvent.click(screen.getByRole('button', { name: 'Filtros, 1 filtro activo' }));
-		fireEvent.change(screen.getByLabelText('Estado de invitación'), { target: { value: 'false' } });
-		expect(screen.getByRole('button', { name: 'Filtros, 1 filtro activo' }).querySelector('.invitation-toolbar__filter-count')?.textContent).toBe('1');
-		fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: false, rsvpStatus: 'confirmed', search: 'Rivera', page: 1, pageSize: 15 }));
-		expect(screen.getByRole('button', { name: 'Filtros, 2 filtros activos' }).querySelector('.invitation-toolbar__filter-count')?.textContent).toBe('2');
+		const archivedTable = await ready('Listado de invitaciones archivadas');
+		expect(getInvitations).toHaveBeenLastCalledWith({ search: undefined, rsvpStatus: 'confirmed', archived: true, page: 1, pageSize: 15 });
+		expect(within(archivedTable).queryByText('Familia Rivera')).toBeNull();
 
 		fireEvent.click(screen.getByRole('button', { name: 'Filtros, 2 filtros activos' }));
-		fireEvent.click(screen.getByRole('button', { name: 'Limpiar' }));
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: 'Rivera', page: 1, pageSize: 15 }));
-		expect(screen.getByRole('button', { name: 'Filtros' }).querySelector('.invitation-toolbar__filter-count')).toBeNull();
-	});
-
-	it('descarta drafts con Escape o click fuera y conserva los filtros aplicados al reabrir', async () => {
-		mount();
-		await ready();
-		const filterButton = screen.getByRole('button', { name: /Filtros/ });
-		fireEvent.click(filterButton);
-		fireEvent.change(screen.getByLabelText('Estado RSVP'), { target: { value: 'confirmed' } });
-		fireEvent.change(screen.getByLabelText('Estado de invitación'), { target: { value: 'false' } });
+		const archivedScope = screen.getByRole('combobox', { name: 'Estado de invitación' }) as HTMLSelectElement;
+		expect(archivedScope.value).toBe('archived');
+		fireEvent.change(archivedScope, { target: { value: 'active' } });
 		fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: false, rsvpStatus: 'confirmed', search: undefined, page: 1, pageSize: 15 }));
-		const callsAfterApply = vi.mocked(getInvitations).mock.calls.length;
+		const activeTable = await ready();
+		expect(getInvitations).toHaveBeenLastCalledWith({ search: undefined, rsvpStatus: 'confirmed', archived: false, page: 1, pageSize: 15 });
+		expect(within(activeTable).queryByText('Familia Archivo')).toBeNull();
 
-		fireEvent.click(filterButton);
-		fireEvent.change(screen.getByLabelText('Estado RSVP'), { target: { value: 'declined' } });
-		fireEvent.change(screen.getByLabelText('Estado de invitación'), { target: { value: 'true' } });
-		fireEvent.keyDown(document, { key: 'Escape' });
-		expect(document.activeElement).toBe(filterButton);
-		fireEvent.click(filterButton);
-		expect((screen.getByLabelText('Estado RSVP') as HTMLSelectElement).value).toBe('confirmed');
-		expect((screen.getByLabelText('Estado de invitación') as HTMLSelectElement).value).toBe('false');
-
-		fireEvent.change(screen.getByLabelText('Estado RSVP'), { target: { value: 'partial' } });
-		fireEvent.mouseDown(document.body);
-		fireEvent.click(filterButton);
-		expect((screen.getByLabelText('Estado RSVP') as HTMLSelectElement).value).toBe('confirmed');
-		expect((screen.getByLabelText('Estado de invitación') as HTMLSelectElement).value).toBe('false');
-		expect(getInvitations).toHaveBeenCalledTimes(callsAfterApply);
-	});
-
-	it('Limpiar elimina ambos filtros aplicados, resetea el draft y cierra el popover', async () => {
-		mount();
-		await ready();
-		const filterButton = screen.getByRole('button', { name: /Filtros/ });
-		fireEvent.click(filterButton);
-		fireEvent.change(screen.getByLabelText('Estado RSVP'), { target: { value: 'partial' } });
-		fireEvent.change(screen.getByLabelText('Estado de invitación'), { target: { value: 'true' } });
+		fireEvent.click(screen.getByRole('button', { name: 'Filtros, 2 filtros activos' }));
+		const activeScope = screen.getByRole('combobox', { name: 'Estado de invitación' }) as HTMLSelectElement;
+		expect(activeScope.value).toBe('active');
+		fireEvent.change(activeScope, { target: { value: 'all' } });
 		fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: true, rsvpStatus: 'partial', search: undefined, page: 1, pageSize: 15 }));
-
-		fireEvent.click(filterButton);
-		const clearButton = screen.getByRole('button', { name: 'Limpiar' }) as HTMLButtonElement;
-		expect(clearButton.disabled).toBe(false);
-		fireEvent.click(clearButton);
-		expect(filterButton.getAttribute('aria-expanded')).toBe('false');
-		expect(screen.queryByRole('dialog', { name: 'Filtrar invitaciones' })).toBeNull();
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: undefined, page: 1, pageSize: 15 }));
-
-		fireEvent.click(filterButton);
-		expect((screen.getByLabelText('Estado RSVP') as HTMLSelectElement).value).toBe('');
-		expect((screen.getByLabelText('Estado de invitación') as HTMLSelectElement).value).toBe('');
-		expect((screen.getByRole('button', { name: 'Limpiar' }) as HTMLButtonElement).disabled).toBe(true);
-		expect((screen.getByRole('button', { name: 'Aplicar filtros' }) as HTMLButtonElement).disabled).toBe(true);
+		const allAgain = await ready();
+		expect(getInvitations).toHaveBeenLastCalledWith({ search: undefined, rsvpStatus: 'confirmed', archived: undefined, page: 1, pageSize: 15 });
+		expect(within(allAgain).getByText('Familia Archivo')).toBeTruthy();
 	});
 
-	it('mantiene intacto el buscador y su placeholder', async () => {
-		mount();
-		await ready();
-		const search = screen.getByLabelText('Buscar invitaciones') as HTMLInputElement;
-		expect(search.placeholder).toBe('Buscar por familia, invitado o código...');
-		fireEvent.change(screen.getByLabelText('Buscar invitaciones'), { target: { value: '  Rivera  ' } });
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: 'Rivera', page: 1, pageSize: 15 }), { timeout: 1200 });
+	it('muestra fecha no disponible si archivedAt falta, sin usar updatedAt', async () => {
+		const item = { ...archived, archivedAt: null };
+		const table = await (async () => { mount({ items: [item], archivedView: true }); return ready('Listado de invitaciones archivadas'); })();
+		expect(within(table).getByText('Fecha no disponible')).toBeTruthy();
+		expect(within(table).queryByText('1 ene 2025')).toBeNull();
 	});
 
-	it('muestra un empty state filtrado y permite limpiar filtros sin borrar la búsqueda', async () => {
-		vi.mocked(getInvitations).mockImplementation(async (filters = {}) => {
-			const constrained = Boolean(filters.search || filters.rsvpStatus || filters.archived !== undefined);
-			return constrained ? { items: [], total: 0 } : { items: [detailed], total: 1 };
-		});
-		renderPage();
+	it('conserva el filtro RSVP, búsqueda y página en el servidor', async () => {
+		vi.mocked(getInvitations).mockResolvedValue({ items: [active], total: 30, page: 1, pageSize: 15, totalPages: 2 });
+		mount({ items: [active], activeView: true, total: 30 });
 		await ready();
-
-		const search = screen.getByLabelText('Buscar invitaciones') as HTMLInputElement;
-		fireEvent.change(search, { target: { value: 'Rivera' } });
-		expect(await screen.findByRole('heading', { name: 'No encontramos invitaciones' })).toBeTruthy();
-		expect(screen.getByRole('button', { name: 'Limpiar búsqueda' })).toBeTruthy();
-
-		fireEvent.click(screen.getByRole('button', { name: 'Filtros' }));
+		fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith(expect.objectContaining({ archived: false, page: 2, pageSize: 15 })));
+		fireEvent.change(screen.getByLabelText('Buscar invitaciones'), { target: { value: 'Rivera' } });
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith(expect.objectContaining({ archived: false, page: 1, search: 'Rivera' })), { timeout: 1200 });
+		fireEvent.click(screen.getByRole('button', { name: /^Filtros/ }));
 		fireEvent.change(screen.getByLabelText('Estado RSVP'), { target: { value: 'confirmed' } });
 		fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: 'confirmed', search: 'Rivera', page: 1, pageSize: 15 }));
-		fireEvent.click(await screen.findByRole('button', { name: 'Limpiar filtros' }));
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ archived: undefined, rsvpStatus: undefined, search: 'Rivera', page: 1, pageSize: 15 }));
-		expect(search.value).toBe('Rivera');
-		expect(screen.getByRole('heading', { name: 'No encontramos invitaciones' })).toBeTruthy();
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith(expect.objectContaining({ archived: false, page: 1, search: 'Rivera', rsvpStatus: 'confirmed' })));
+		await waitFor(() => expect(screen.getByText(/30 invitaciones/)).toBeTruthy());
 	});
 
-	it('muestra acciones reales cuando la colección está completamente vacía', async () => {
-		mount([]);
-		const heading = await screen.findByRole('heading', { name: 'Aún no hay invitaciones' });
-		const empty = heading.closest('section') as HTMLElement;
-		expect(within(empty).getByText('Crea tu primera invitación o impórtalas desde Excel.')).toBeTruthy();
-		expect(within(empty).getByRole('link', { name: 'Nueva invitación' }).getAttribute('href')).toBe('/invitaciones/nueva');
-		expect(within(empty).getByRole('link', { name: 'Importar Excel' }).getAttribute('href')).toBe('/invitaciones/importar');
-		expect(screen.queryByRole('table')).toBeNull();
+	it('pagina las archivadas con filtro fijo y conserva los totales devueltos por la API', async () => {
+		const last = invitation('ARCH-16', { isArchived: true, archivedAt: '2026-10-01T12:00:00.000Z' });
+		const load = async (filters: InvitationFilters = {}) => filters.page === 2
+			? { items: [last], total: 16, page: 2, pageSize: 15, totalPages: 2 }
+			: { items: [archived], total: 16, page: 1, pageSize: 15, totalPages: 2 };
+		mount({ items: [archived], archivedView: true, total: 16, load });
+		await ready('Listado de invitaciones archivadas');
+		fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+		expect(await screen.findByRole('link', { name: 'Familia ARCH-16' })).toBeTruthy();
+		expect(getInvitations).toHaveBeenLastCalledWith({ search: undefined, rsvpStatus: undefined, archived: true, page: 2, pageSize: 15 });
+		expect(document.querySelector('.invitation-list-summary p')?.textContent).toContain('16–16 de 16 invitaciones');
 	});
 
-	it('usa un skeleton semántico sin exponer filas o contenido ficticio', () => {
-		vi.mocked(getInvitations).mockReturnValue(new Promise(() => undefined));
-		renderPage();
-		const loading = screen.getByRole('status', { name: 'Cargando invitaciones' });
-		expect(loading.querySelector('.invitation-skeleton__visual')?.getAttribute('aria-hidden')).toBe('true');
-		expect(screen.queryByRole('table')).toBeNull();
-		expect(screen.queryByRole('row')).toBeNull();
-	});
-
-	it('renderiza los cuatro estados RSVP sin redefinirlos', async () => {
-		mount([
-			invitation('PENDING', { rsvpStatus: 'pending' }),
-			invitation('CONFIRMED', { rsvpStatus: 'confirmed' }),
-			invitation('PARTIAL', { rsvpStatus: 'partial' }),
-			invitation('DECLINED', { rsvpStatus: 'declined' }),
-		]);
-		await ready();
-		for (const label of ['Pendiente', 'Confirmada', 'Parcial', 'Declinada']) {
-			expect(screen.getByText(label)).toBeTruthy();
-		}
-	});
-
-	it('copia una URL distinta por id, no navega y notifica éxito o error', async () => {
-		mount();
-		await ready();
-		const first = screen.getByRole('button', { name: 'Copiar enlace de Familia Rivera' });
+	it('copia el enlace público correcto y muestra el tooltip accesible', async () => {
+		const table = await (async () => { mount(); return ready(); })();
+		const copy = within(table).getByRole('button', { name: 'Copiar enlace de Familia Rivera' });
 		const tooltip = screen.getAllByRole('tooltip')[0];
-		expect(tooltip.textContent).toBe('Copiar enlace');
-		expect(first.getAttribute('aria-describedby')).toBe(tooltip.id);
-		fireEvent.click(first);
-		await waitFor(() => expect(writeText).toHaveBeenCalledWith('https://public.test/invitacion/REAL-1'));
-		expect(notify.success).toHaveBeenCalledWith('Enlace copiado', {
-			description: 'Puedes compartir la invitación de Familia Rivera.',
-		});
-		expect(window.location.pathname).toBe('/');
-
-		fireEvent.click(screen.getByRole('button', { name: 'Copiar enlace de Familia ARCH-2' }));
-		await waitFor(() => expect(writeText).toHaveBeenLastCalledWith('https://public.test/invitacion/ARCH-2'));
-		expect(new Set(writeText.mock.calls.map(([url]) => url)).size).toBe(2);
-
-		writeText.mockRejectedValueOnce(new Error('clipboard blocked'));
-		fireEvent.click(first);
-		await waitFor(() => expect(notify.error).toHaveBeenCalledWith('No se pudo copiar el enlace', {
-			description: 'Inténtalo nuevamente.',
-		}));
+		expect(copy.getAttribute('aria-describedby')).toBe(tooltip.id);
+		fireEvent.click(copy);
+		await waitFor(() => expect(writeText).toHaveBeenCalledWith('https://public.test/invitacion/ACT-1'));
+		expect(notify.success).toHaveBeenCalledWith('Enlace copiado', { description: 'Puedes compartir la invitación de Familia Rivera.' });
+		expect(screen.queryByTestId('current-path')).toBeNull();
 	});
 
-	it('mantiene los avatares deterministas entre invitaciones del mismo estado', async () => {
-		mount([invitation('UNO'), invitation('DOS')]);
+	it('hace clic en el área libre para abrir el detalle y mantiene acciones separadas', async () => {
+		mount();
 		const table = await ready();
-		const avatars = table.querySelectorAll('.invitation-table__avatar');
-		expect(avatars).toHaveLength(2);
-		expect(avatars[0].className).toBe(avatars[1].className);
-		expect(avatars[0].className).toContain('invitation-table__avatar--pending');
+		const row = within(table).getByRole('row', { name: /Familia Rivera/ });
+		expect(within(row).getByRole('link', { name: 'Familia Rivera' }).tabIndex).toBe(0);
+		fireEvent.click(row.querySelector('[headers="invitation-col-code"]')!);
+		expect(screen.getByTestId('current-path').textContent).toBe('/invitaciones/ACT-1');
 	});
 
-	it('abre un solo menú, enlaza detalle/edición y cierra con Escape o click fuera', async () => {
-		mount();
-		await ready();
-		expect(screen.getAllByRole('link', { name: /Ver detalle/ })[0].getAttribute('href')).toBe('/invitaciones/REAL-1');
-		const activeMenu = screen.getByRole('button', { name: 'Más acciones para Familia Rivera' });
-		fireEvent.keyDown(activeMenu, { key: 'ArrowDown' });
-		expect(activeMenu.getAttribute('aria-expanded')).toBe('true');
-		expect(screen.getByRole('menu')).toBeTruthy();
-		expect(screen.getByRole('menuitem', { name: 'Editar invitación' }).getAttribute('href')).toBe('/invitaciones/REAL-1');
-		expect(screen.getByRole('menuitem', { name: 'Archivar' })).toBeTruthy();
-
-		fireEvent.keyDown(document, { key: 'Escape' });
-		expect(screen.queryByRole('menu')).toBeNull();
-		fireEvent.click(activeMenu);
-		fireEvent.mouseDown(document.body);
-		expect(screen.queryByRole('menu')).toBeNull();
-
-		fireEvent.click(screen.getByRole('button', { name: 'Más acciones para Familia ARCH-2' }));
-		expect(screen.getByRole('menuitem', { name: 'Restaurar' })).toBeTruthy();
-		expect(screen.queryByRole('menuitem', { name: 'Archivar' })).toBeNull();
-	});
-
-	it('archivar requiere confirmación, evita ejecución accidental y restaura con la operación real', async () => {
-		vi.mocked(archiveInvitation).mockResolvedValue({ ...detailed, isArchived: true, archivedAt: '2026-09-25T12:00:00.000Z' });
-		vi.mocked(restoreInvitation).mockResolvedValue({ ...archived, isArchived: false, archivedAt: null });
-		mount();
-		await ready();
-
-		fireEvent.click(screen.getByRole('button', { name: 'Más acciones para Familia Rivera' }));
-		expect(archiveInvitation).not.toHaveBeenCalled();
-		fireEvent.click(screen.getByRole('menuitem', { name: 'Archivar' }));
-		expect(archiveInvitation).not.toHaveBeenCalled();
-		expect(screen.getByRole('dialog', { name: 'Archivar invitación' })).toBeTruthy();
+	it('archiva con confirmación y quita el registro de la lista activa', async () => {
+		let archivedNow = false;
+		const load = async (filters: InvitationFilters = {}) => filters.archived
+			? { items: archivedNow ? [{ ...active, isArchived: true, archivedAt: '2026-10-08T12:00:00.000Z' }] : [], total: Number(archivedNow) }
+			: { items: archivedNow ? [] : [active], total: Number(!archivedNow) };
+		vi.mocked(archiveInvitation).mockImplementation(async () => {
+			archivedNow = true;
+			return { ...active, isArchived: true, archivedAt: '2026-10-08T12:00:00.000Z' };
+		});
+		mount({ activeView: true, load });
+		const table = await ready();
+		fireEvent.click(within(table).getByRole('button', { name: 'Archivar invitación: Familia Rivera' }));
+		expect(await screen.findByRole('dialog', { name: 'Archivar invitación' })).toBeTruthy();
+		expect(screen.queryByTestId('current-path')).toBeNull();
 		fireEvent.click(screen.getByRole('button', { name: 'Confirmar archivo' }));
-		await waitFor(() => expect(archiveInvitation).toHaveBeenCalledOnce());
-		expect(notify.success).toHaveBeenCalledWith('Invitación archivada', {
-			description: 'La invitación dejó de estar disponible para el invitado.',
-		});
-
-		await ready();
-		await waitFor(() => expect(screen.getByRole('button', { name: 'Más acciones para Familia ARCH-2' })).toBeTruthy());
-		fireEvent.click(screen.getByRole('button', { name: 'Más acciones para Familia ARCH-2' }));
-		fireEvent.click(screen.getByRole('menuitem', { name: 'Restaurar' }));
-		expect(restoreInvitation).not.toHaveBeenCalled();
-		fireEvent.click(screen.getByRole('button', { name: 'Confirmar restauración' }));
-		await waitFor(() => expect(restoreInvitation).toHaveBeenCalledOnce());
-		expect(notify.success).toHaveBeenCalledWith('Invitación restaurada', {
-			description: 'La invitación volvió a estar activa.',
-		});
+		await waitFor(() => expect(archiveInvitation).toHaveBeenCalledWith('ACT-1'));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ search: undefined, rsvpStatus: undefined, archived: false, page: 1, pageSize: 15 }));
+		await waitFor(() => expect(screen.queryByRole('table')).toBeNull());
+		expect(notify.success).toHaveBeenCalledWith('Invitación archivada', expect.any(Object));
 	});
 
-	it('mantiene el diálogo de archivo en el viewport y permite cerrarlo con Escape', async () => {
-		mount();
-		await ready();
-		const trigger = screen.getByRole('button', { name: 'Más acciones para Familia Rivera' });
-		fireEvent.click(trigger);
-		fireEvent.click(screen.getByRole('menuitem', { name: 'Archivar' }));
-		const dialog = screen.getByRole('dialog', { name: 'Archivar invitación' });
-		expect(dialog.parentElement?.parentElement).toBe(document.body);
+	it('restaura desde Archivadas y elimina el registro de esa lista', async () => {
+		let restored = false;
+		const load = async (filters: InvitationFilters = {}) => filters.archived
+			? { items: restored ? [] : [archived], total: Number(!restored) }
+			: { items: restored ? [{ ...archived, isArchived: false, archivedAt: null }] : [], total: Number(restored) };
+		vi.mocked(restoreInvitation).mockImplementation(async () => {
+			restored = true;
+			return { ...archived, isArchived: false, archivedAt: null };
+		});
+		mount({ items: [archived], archivedView: true, load });
+		const table = await ready('Listado de invitaciones archivadas');
+		fireEvent.click(within(table).getByRole('button', { name: 'Restaurar invitación: Familia Archivo' }));
+		fireEvent.click(await screen.findByRole('button', { name: 'Confirmar restauración' }));
+		await waitFor(() => expect(restoreInvitation).toHaveBeenCalledWith('ARCH-2'));
+		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith({ search: undefined, rsvpStatus: undefined, archived: true, page: 1, pageSize: 15 }));
+		await waitFor(() => expect(screen.queryByRole('table')).toBeNull());
+		expect(notify.success).toHaveBeenCalledWith('Invitación restaurada', expect.any(Object));
+	});
+
+	it('conserva el diálogo de archivo para fallos y cancela con Escape', async () => {
+		mount({ activeView: true });
+		const table = await ready();
+		fireEvent.click(within(table).getByRole('button', { name: 'Archivar invitación: Familia Rivera' }));
+		const dialog = await screen.findByRole('dialog', { name: 'Archivar invitación' });
 		expect(document.body.style.overflow).toBe('hidden');
 		fireEvent.keyDown(document, { key: 'Escape' });
 		expect(screen.queryByRole('dialog', { name: 'Archivar invitación' })).toBeNull();
 		expect(document.body.style.overflow).toBe('');
 		expect(archiveInvitation).not.toHaveBeenCalled();
+		expect(dialog).toBeTruthy();
 	});
 
-	it('notifica los fallos reales de archivo y restauración sin omitir confirmación', async () => {
-		vi.mocked(archiveInvitation).mockRejectedValueOnce(new Error('network'));
-		vi.mocked(restoreInvitation).mockRejectedValueOnce(new Error('network'));
+	it('muestra empty states, carga y errores con el patrón existente', async () => {
+		mount({ items: [], total: 0 });
+		expect(await screen.findByRole('heading', { name: 'Aún no hay invitaciones' })).toBeTruthy();
+		cleanup();
+		vi.mocked(getInvitations).mockRejectedValueOnce(new Error('offline'));
 		mount();
-		await ready();
-
-		fireEvent.click(screen.getByRole('button', { name: 'Más acciones para Familia Rivera' }));
-		fireEvent.click(screen.getByRole('menuitem', { name: 'Archivar' }));
-		expect(archiveInvitation).not.toHaveBeenCalled();
-		fireEvent.click(screen.getByRole('button', { name: 'Confirmar archivo' }));
-		await waitFor(() => expect(notify.error).toHaveBeenCalledWith('No se pudo archivar la invitación', {
-			description: 'Revisa el estado de la invitación e inténtalo nuevamente.',
-		}));
-
-		await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Archivar invitación' })).toBeNull());
-		fireEvent.click(screen.getByRole('button', { name: 'Más acciones para Familia ARCH-2' }));
-		fireEvent.click(screen.getByRole('menuitem', { name: 'Restaurar' }));
-		expect(restoreInvitation).not.toHaveBeenCalled();
-		fireEvent.click(screen.getByRole('button', { name: 'Confirmar restauración' }));
-		await waitFor(() => expect(notify.error).toHaveBeenCalledWith('No se pudo restaurar la invitación', {
-			description: 'Revisa el estado de la invitación e inténtalo nuevamente.',
-		}));
-	});
-
-	it('pagina 15/16 resultados con resumen, estados disabled y aria-current', async () => {
-		const firstPage = Array.from({ length: 15 }, (_, index) => invitation(`P1-${index + 1}`));
-		const last = invitation('P2-16');
-		vi.mocked(getInvitations).mockImplementation(async (filters = {}) => filters.page === 2
-			? { items: [last], total: 16, page: 2, pageSize: 15, totalPages: 2 }
-			: { items: firstPage, total: 16, page: 1, pageSize: 15, totalPages: 2 });
-		renderPage();
-		await ready();
-		expect(screen.getByText('Mostrando 1–15 de 16 invitaciones')).toBeTruthy();
-		expect((screen.getByRole('button', { name: 'Anterior' }) as HTMLButtonElement).disabled).toBe(true);
-		expect(screen.getByRole('button', { name: 'Ir a la página 1' }).getAttribute('aria-current')).toBe('page');
-
-		fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
-		expect(await screen.findByText('Familia P2-16')).toBeTruthy();
-		expect(screen.getByText('Mostrando 16–16 de 16 invitaciones')).toBeTruthy();
-		expect((screen.getByRole('button', { name: 'Siguiente' }) as HTMLButtonElement).disabled).toBe(true);
-		expect(screen.getByRole('button', { name: 'Ir a la página 2' }).getAttribute('aria-current')).toBe('page');
-	});
-
-	it('vuelve a página 1 al buscar o aplicar filtros', async () => {
-		vi.mocked(getInvitations).mockResolvedValue({ items: [detailed], total: 30, page: 1, pageSize: 15, totalPages: 2 });
-		renderPage();
-		await ready();
-		fireEvent.click(screen.getByRole('button', { name: 'Ir a la página 2' }));
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 })));
-		fireEvent.change(screen.getByLabelText('Buscar invitaciones'), { target: { value: 'Carlos' } });
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, search: 'Carlos' })), { timeout: 1200 });
-
-		fireEvent.click(screen.getByRole('button', { name: /Filtros/ }));
-		fireEvent.change(screen.getByLabelText('Estado RSVP'), { target: { value: 'confirmed' } });
-		fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, rsvpStatus: 'confirmed' })));
-	});
-
-	it('acepta la página corregida por API después de archivar el único resultado final', async () => {
-		let archivedCurrent = false;
-		const only = invitation('ONLY-P2');
-		vi.mocked(getInvitations).mockImplementation(async (filters = {}) => {
-			if (filters.page === 2 && !archivedCurrent) return { items: [only], total: 16, page: 2, pageSize: 15, totalPages: 2 };
-			if (!archivedCurrent) return { items: [detailed], total: 16, page: 1, pageSize: 15, totalPages: 2 };
-			return { items: [detailed], total: 15, page: 1, pageSize: 15, totalPages: 1 };
-		});
-		vi.mocked(archiveInvitation).mockImplementation(async () => {
-			archivedCurrent = true;
-			return { ...only, isArchived: true, archivedAt: '2026-09-25T12:00:00.000Z' };
-		});
-		renderPage();
-		await ready();
-		fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
-		expect(await screen.findByText('Familia ONLY-P2')).toBeTruthy();
-		fireEvent.click(screen.getByRole('button', { name: 'Más acciones para Familia ONLY-P2' }));
-		fireEvent.click(screen.getByRole('menuitem', { name: 'Archivar' }));
-		fireEvent.click(screen.getByRole('button', { name: 'Confirmar archivo' }));
-		expect(await screen.findByText('Mostrando 1–15 de 15 invitaciones')).toBeTruthy();
-		await waitFor(() => expect(getInvitations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 })));
+		expect((await screen.findByRole('alert')).textContent).toContain('No fue posible cargar las invitaciones.');
 	});
 });

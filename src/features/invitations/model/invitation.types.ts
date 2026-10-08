@@ -14,6 +14,8 @@ export type RsvpStatus =
 	| 'partial'
 	| 'declined';
 
+export type InvitationScope = 'all' | 'active' | 'archived';
+
 export interface InvitationFilters {
 	search?: string;
 	rsvpStatus?: RsvpStatus;

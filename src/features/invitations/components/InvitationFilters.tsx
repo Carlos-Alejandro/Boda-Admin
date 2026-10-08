@@ -1,26 +1,26 @@
 import type { ChangeEventHandler } from 'react';
 
 import { Button } from '../../../shared/components/Button/Button';
-import type { RsvpStatus } from '../model/invitation.types';
+import type { InvitationScope, RsvpStatus } from '../model/invitation.types';
 
 interface InvitationFiltersProps {
 	rsvpStatus: RsvpStatus | '';
-	archived: boolean | undefined;
+	invitationScope: InvitationScope;
 	hasAppliedFilters: boolean;
 	hasDraftChanges: boolean;
 	onRsvpStatusChange: ChangeEventHandler<HTMLSelectElement>;
-	onArchivedChange: ChangeEventHandler<HTMLSelectElement>;
+	onInvitationScopeChange: ChangeEventHandler<HTMLSelectElement>;
 	onApply: () => void;
 	onClear: () => void;
 }
 
 export function InvitationFilters({
 	rsvpStatus,
-	archived,
+	invitationScope,
 	hasAppliedFilters,
 	hasDraftChanges,
 	onRsvpStatusChange,
-	onArchivedChange,
+	onInvitationScopeChange,
 	onApply,
 	onClear,
 }: InvitationFiltersProps) {
@@ -39,13 +39,10 @@ export function InvitationFilters({
 
 			<label className="invitation-filters__field">
 				<span>Estado de invitación</span>
-				<select
-					value={archived === undefined ? '' : String(archived)}
-					onChange={onArchivedChange}
-				>
-					<option value="">Todas</option>
-					<option value="false">Activas</option>
-					<option value="true">Archivadas</option>
+				<select value={invitationScope} onChange={onInvitationScopeChange}>
+					<option value="all">Todas</option>
+					<option value="active">Activas</option>
+					<option value="archived">Archivadas</option>
 				</select>
 			</label>
 

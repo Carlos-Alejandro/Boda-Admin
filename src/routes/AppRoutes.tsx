@@ -24,6 +24,7 @@ export function AppRoutes() {
 				<Route element={<AdminLayout />}>
 					<Route index element={<DashboardPage />} />
 					<Route path="invitaciones" element={<InvitationListPage />} />
+					<Route path="invitaciones/archivadas" element={<InvitationListPage archivedView />} />
 					<Route path="invitaciones/nueva" element={<CreateInvitationPage />} />
 					<Route path="invitaciones/importar" element={<Suspense fallback={<p role="status">Cargando importador…</p>}><ImportInvitationsPage /></Suspense>} />
 					<Route path="invitaciones/:id" element={<InvitationDetailPage />} />

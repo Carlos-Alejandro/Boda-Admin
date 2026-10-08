@@ -56,6 +56,12 @@ it('serializa búsqueda, filtros y paginación real en GET', async () => {
   expect(vi.mocked(fetch).mock.calls[0][0]).toBe('https://api.test/api/admin/invitations?search=Am%C3%A9rica&rsvpStatus=partial&archived=false&page=2&pageSize=15');
 });
 
+it('omite archived al consultar Todas para permitir la lista completa existente', async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }));
+  await getInvitations({ page: 1, pageSize: 15 });
+  expect(vi.mocked(fetch).mock.calls[0][0]).toBe('https://api.test/api/admin/invitations?page=1&pageSize=15');
+});
+
 it.each([200, 201, 202, 206])('HTTP %s solo confirma creación si es 200/201, conservando orden y autenticación', async status => {
   vi.mocked(fetch).mockImplementation(async () => new Response(JSON.stringify({ id: 'real', version: 'v1' }), { status }));
   let items: ImportItem[] = [2, 5].map(row => ({

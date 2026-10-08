@@ -45,7 +45,7 @@ export function AdminSidebar() {
 	const accountMenuOpen = accountMenuState.route === location.key && accountMenuState.open;
 	const setAccountMenuOpen = useCallback((open: boolean) => setAccountMenuState({ route: location.key, open }), [location.key]);
 	const invitationRouteActive = location.pathname.startsWith('/invitaciones');
-	const invitationDetailActive = invitationRouteActive && location.pathname !== '/invitaciones' && location.pathname !== '/invitaciones/nueva' && location.pathname !== '/invitaciones/importar';
+	const invitationDetailActive = invitationRouteActive && location.pathname !== '/invitaciones' && location.pathname !== '/invitaciones/archivadas' && location.pathname !== '/invitaciones/nueva' && location.pathname !== '/invitaciones/importar';
 	const [navigationState, setNavigationState] = useState({ route: location.pathname, expanded: invitationRouteActive });
 	const expanded = navigationState.route === location.pathname ? navigationState.expanded : invitationRouteActive;
 	const closeDrawer = useCallback(() => {
@@ -181,7 +181,7 @@ export function AdminSidebar() {
 						<ChevronIcon expanded={expanded} />
 					</button>
 					<div id="admin-sidebar-invitations" inert={!expanded} className={`admin-sidebar__submenu${expanded ? ' admin-sidebar__submenu--expanded' : ''}`}>
-						<NavLink className={() => navigationClassName({ isActive: location.pathname === '/invitaciones' || invitationDetailActive })} to="/invitaciones" end onClick={closeDrawer}>
+						<NavLink className={() => navigationClassName({ isActive: location.pathname === '/invitaciones' || location.pathname === '/invitaciones/archivadas' || invitationDetailActive })} to="/invitaciones" end onClick={closeDrawer}>
 							<span className="admin-sidebar__subnav-dot" aria-hidden="true" />
 							Todas
 						</NavLink>
