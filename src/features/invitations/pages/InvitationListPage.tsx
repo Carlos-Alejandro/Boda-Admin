@@ -230,6 +230,7 @@ export function InvitationListPage({ archivedView = false }: { archivedView?: bo
 			const existing = current.items.some((item) => item.id === updated.id);
 			if (scope !== 'all' && updated.isArchived !== (scope === 'archived')) {
 				return {
+					...current,
 					items: current.items.filter((item) => item.id !== updated.id),
 					total: existing ? Math.max(0, current.total - 1) : current.total,
 				};

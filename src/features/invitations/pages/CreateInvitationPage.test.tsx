@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { notify } from '../../../shared/notifications/notify';
+import { ApiOutcomeUnknownError, ApiResponseError } from '../../../services/http/apiClient';
 import { createInvitation } from '../api/invitationService';
 import type { Invitation } from '../model/invitation.types';
 import { CreateInvitationPage } from './CreateInvitationPage';
@@ -78,6 +79,20 @@ describe('feedback al crear una invitación', () => {
 			description: 'Revisa los datos e inténtalo nuevamente.',
 		}));
 		expect(screen.queryByText('No fue posible crear la invitación.')).toBeNull();
+	});
+
+	it.each([new ApiResponseError(201, true), new ApiOutcomeUnknownError()])('bloquea reintentos cuando la creación pudo completarse', async error => {
+		vi.mocked(createInvitation).mockRejectedValue(error);
+		mount();
+		fireEvent.change(screen.getByRole('textbox', { name: 'Nombre de la invitación' }), { target: { value: 'Familia Ruiz' } });
+		fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '1' } });
+		fireEvent.click(screen.getByRole('button', { name: 'Crear invitación' }));
+		const alert = await screen.findByRole('alert');
+		expect(alert.textContent).toContain('podría haberse creado');
+		expect(screen.getByRole('link', { name: 'Ir al listado' }).getAttribute('href')).toBe('/invitaciones');
+		expect(screen.getByRole('button', { name: 'Crear invitación' }).hasAttribute('disabled')).toBe(true);
+		fireEvent.submit(screen.getByRole('button', { name: 'Crear invitación' }).closest('form')!);
+		expect(createInvitation).toHaveBeenCalledTimes(1);
 	});
 
 	it('actualiza el resumen al editar personas, lugares y sustituciones', () => {

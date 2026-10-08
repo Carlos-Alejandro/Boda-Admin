@@ -11,6 +11,9 @@ import { guest, invitation } from '../../../../tests/dashboardTestSupport';
 vi.mock('../../invitations/api/invitationService', () => ({ getInvitations: vi.fn() }));
 const mount = () => render(<StrictMode><MemoryRouter><DashboardPage /></MemoryRouter></StrictMode>);
 const ready = () => screen.findByRole('group', { name: 'Resumen en cuatro tarjetas' });
+const listResponse = (items: InvitationListResponse['items'], total = items.length): InvitationListResponse => ({
+ items, total, page: 1, pageSize: 15, totalPages: total === 0 ? 0 : Math.ceil(total / 15),
+});
 
 describe('Dashboard funcional', () => {
  beforeEach(() => vi.mocked(getInvitations).mockReset());
@@ -27,11 +30,11 @@ describe('Dashboard funcional', () => {
   expect(screen.queryByRole('group', { name: 'Resumen en cuatro tarjetas' })).toBeNull();
   expect(getInvitations).toHaveBeenCalledTimes(1);
   expect(getInvitations).toHaveBeenCalledWith();
-  await act(async () => resolve({ items: [], total: 0 }));
+  await act(async () => resolve(listResponse([])));
   expect(screen.queryByText('Cargando resumen de la boda...')).toBeNull();
  });
  it('error y reintento recuperan datos sin conservar resultados ficticios', async () => {
-  vi.mocked(getInvitations).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ items: [invitation('A')], total: 1 });
+  vi.mocked(getInvitations).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(listResponse([invitation('A')]));
   mount();
   expect(await screen.findByRole('alert')).toBeTruthy();
   expect(screen.queryByRole('group')).toBeNull();
@@ -41,7 +44,7 @@ describe('Dashboard funcional', () => {
   expect(getInvitations).toHaveBeenCalledTimes(2);
  });
  it.each([0, 20])('rechaza total=%s incoherente y retry vuelve a consultar', async total => {
-  vi.mocked(getInvitations).mockResolvedValueOnce({ items: [invitation('A')], total }).mockResolvedValueOnce({ items: [invitation('A')], total: 1 });
+  vi.mocked(getInvitations).mockResolvedValueOnce(listResponse([invitation('A')], total)).mockResolvedValueOnce(listResponse([invitation('A')], 1));
   mount();
   await screen.findByRole('alert');
   expect(screen.queryByRole('group')).toBeNull();
@@ -53,7 +56,7 @@ describe('Dashboard funcional', () => {
  it('nombres completos, enlaces de cada panel y semántica accesible del resumen', async () => {
   const name = 'Nombre completo muy largo '.repeat(10).trim();
   const items = [invitation('ABC12345', { displayName: name, guests: [guest(name, null, 'replacement')], updatedAt: '2026-09-22T15:00:00Z' })];
-  vi.mocked(getInvitations).mockResolvedValue({ items, total: 1 });
+  vi.mocked(getInvitations).mockResolvedValue(listResponse(items, 1));
   mount(); await ready();
   expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   const regions = ['Cupos por invitación', 'Personas sin respuesta', 'Invitaciones actualizadas recientemente'];
@@ -71,7 +74,7 @@ describe('Dashboard funcional', () => {
  });
  it('capacidad cero inesperada no produce una división inválida en las barras', async () => {
   // Defensive rendering only: Boda-API rejects maxGuests < 1.
-  vi.mocked(getInvitations).mockResolvedValue({ items: [invitation('ZERO', { maxGuests: 0, guests: [] })], total: 1 });
+  vi.mocked(getInvitations).mockResolvedValue(listResponse([invitation('ZERO', { maxGuests: 0, guests: [] })], 1));
   mount(); await ready();
   const panel = screen.getByRole('region', { name: 'Cupos por invitación' });
   const bar = panel.querySelector('[aria-hidden="true"] > span') as HTMLElement;
@@ -81,14 +84,14 @@ describe('Dashboard funcional', () => {
  });
  it('fechas inválidas y archivadas no producen actualizaciones visibles', async () => {
   const items = [invitation('INVALID', { updatedAt: 'fecha inválida' }), invitation('NULL'), invitation('ARCH', { isArchived: true, updatedAt: '2026-09-22T15:00:00Z' })];
-  vi.mocked(getInvitations).mockResolvedValue({ items, total: items.length });
+  vi.mocked(getInvitations).mockResolvedValue(listResponse(items));
   mount(); await ready();
   const recent = screen.getByRole('region', { name: 'Invitaciones actualizadas recientemente' });
   expect(within(recent).queryAllByRole('link')).toHaveLength(0);
   expect(recent.querySelector('time')).toBeNull();
  });
  it('estado vacío con acciones reales, anillo vacío y denominador cero', async () => {
-  vi.mocked(getInvitations).mockResolvedValue({ items: [], total: 0 });
+  vi.mocked(getInvitations).mockResolvedValue(listResponse([]));
   mount(); await ready();
   expect(screen.getByText(/Todavía no hay invitaciones/)).toBeTruthy();
   expect(screen.getByText('Sin personas identificadas')).toBeTruthy();
@@ -99,7 +102,7 @@ describe('Dashboard funcional', () => {
  });
  it('cuatro tarjetas, distribución textual, selecciones, seguimiento y enlaces reales', async () => {
   const items = [invitation('A/B', { displayName: 'Familia visible', maxGuests: 4, guests: [guest('Asistente', true), guest('Pendiente real'), guest('No asistente', false), guest('', false, 'open')], rsvpStatus: 'partial', updatedAt: '2026-09-22T15:00:00Z' }), invitation('ARCH', { isArchived: true, guests: [guest('Nombre archivado')] })];
-  vi.mocked(getInvitations).mockResolvedValue({ items, total: 2 });
+  vi.mocked(getInvitations).mockResolvedValue(listResponse(items, 2));
   mount(); const cards = await ready();
   expect(within(cards).getAllByRole('heading', { level: 2 })).toHaveLength(4);
   expect(document.getElementById(cards.getAttribute('aria-describedby')!)?.textContent).toBe('Personas, cupos y RSVP: solo invitaciones activas.');
@@ -135,7 +138,7 @@ describe('Dashboard funcional', () => {
   expect(screen.queryByRole('searchbox')).toBeNull();
  });
  it('solo archivadas y fechas ausentes no inventan contenido', async () => {
-  vi.mocked(getInvitations).mockResolvedValue({ items: [invitation('A', { isArchived: true })], total: 1 });
+  vi.mocked(getInvitations).mockResolvedValue(listResponse([invitation('A', { isArchived: true })], 1));
   mount(); await ready();
   expect(screen.getByText(/Todas las invitaciones están archivadas/)).toBeTruthy();
   expect(screen.getByText('No hay personas identificadas sin respuesta.')).toBeTruthy();
@@ -143,7 +146,7 @@ describe('Dashboard funcional', () => {
  });
  it('limita las listas visibles, conserva los totales y no trata partial como tarea', async () => {
   const items = Array.from({ length: 8 }, (_, n) => invitation(String(n), { rsvpStatus: 'partial', updatedAt: `2026-09-${10 + n}T10:00:00Z`, guests: [guest(`Respondida ${n}`, true)] }));
-  vi.mocked(getInvitations).mockResolvedValue({ items, total: items.length });
+  vi.mocked(getInvitations).mockResolvedValue(listResponse(items));
   mount(); await ready();
   const capacity = screen.getByRole('region', { name: 'Cupos por invitación' });
   const recent = screen.getByRole('region', { name: 'Invitaciones actualizadas recientemente' });
@@ -156,9 +159,9 @@ describe('Dashboard funcional', () => {
  });
  it('ignora respuestas de un montaje anterior', async () => {
   let resolve!: (value: InvitationListResponse) => void;
-  vi.mocked(getInvitations).mockReturnValueOnce(new Promise(done => { resolve = done; })).mockResolvedValueOnce({ items: [], total: 0 });
+  vi.mocked(getInvitations).mockReturnValueOnce(new Promise(done => { resolve = done; })).mockResolvedValueOnce(listResponse([]));
   const old = mount(); old.unmount(); mount(); await ready();
-  await act(async () => resolve({ items: [invitation('Anterior')], total: 1 }));
+  await act(async () => resolve(listResponse([invitation('Anterior')])));
   expect(screen.queryByText('Familia Anterior')).toBeNull();
  });
 });

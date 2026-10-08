@@ -10,7 +10,7 @@ const authMocks = vi.hoisted(() => ({
 vi.mock('../../config/firebase', () => ({ auth: authMocks }));
 
 import { onAdminAuthenticationFailed, onAdminAuthorizationDenied } from '../../auth/authorizationEvents';
-import { apiRequest, ApiError } from './apiClient';
+import { apiRequest, ApiError, ApiOutcomeUnknownError } from './apiClient';
 
 describe('apiRequest authorization events', () => {
 	let forbiddenCalls: number;
@@ -65,5 +65,26 @@ describe('apiRequest authorization events', () => {
 		await expect(apiRequest('/api/admin/invitations')).rejects.toThrow('Failed to fetch');
 		expect(forbiddenCalls).toBe(0);
 		stopForbidden();
+	});
+
+	it('rejects unexpected successful HTTP statuses for reads', async () => {
+		vi.mocked(fetch).mockResolvedValue(new Response('{}', { status: 206 }));
+		await expect(apiRequest('/api/admin/invitations', {}, [200])).rejects.toMatchObject({ status: 206, mayHaveCompleted: false });
+	});
+
+	it('marks a malformed successful mutation response as ambiguous', async () => {
+		vi.mocked(fetch).mockResolvedValue(new Response('{"id":"created"}', { status: 201 }));
+		const parser = (value: unknown) => {
+			if (typeof value !== 'object' || value === null || !('displayName' in value)) throw new Error('invalid');
+			return value;
+		};
+		await expect(apiRequest('/api/admin/invitations', { method: 'POST' }, [201], parser))
+			.rejects.toMatchObject({ name: 'ApiResponseError', status: 201, mayHaveCompleted: true });
+	});
+
+	it('marks network errors after a mutation as an unknown outcome', async () => {
+		vi.mocked(fetch).mockRejectedValue(new TypeError('Failed to fetch'));
+		await expect(apiRequest('/api/admin/invitations', { method: 'POST' }, [201]))
+			.rejects.toBeInstanceOf(ApiOutcomeUnknownError);
 	});
 });

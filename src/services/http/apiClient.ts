@@ -14,21 +14,58 @@ export class ApiError extends Error {
 	readonly status: number;
 	readonly validationMessage?: string;
 	readonly code?: string;
+	readonly mayHaveCompleted: boolean;
 
-	constructor(status: number, validationMessage?: string, code?: string) {
+	constructor(status: number, validationMessage?: string, code?: string, mayHaveCompleted = status === 408 || status >= 500) {
 		super(`La API respondió con estado ${status}.`);
 		this.name = 'ApiError';
 		this.status = status;
 		this.validationMessage = validationMessage;
 		this.code = code;
+		this.mayHaveCompleted = mayHaveCompleted;
 	}
 }
 
+export class ApiResponseError extends Error {
+	readonly status: number;
+	readonly mayHaveCompleted: boolean;
+
+	constructor(status: number, mayHaveCompleted: boolean) {
+		super('La API devolvió una respuesta exitosa que no cumple el contrato esperado.');
+		this.name = 'ApiResponseError';
+		this.status = status;
+		this.mayHaveCompleted = mayHaveCompleted;
+	}
+}
+
+export class ApiOutcomeUnknownError extends Error {
+	readonly mayHaveCompleted = true;
+
+	constructor() {
+		super('No se pudo confirmar el resultado de la operación.');
+		this.name = 'ApiOutcomeUnknownError';
+	}
+}
+
+type ApiResponseParser<T> = (value: unknown) => T;
+
+export function apiRequest(
+	path: string,
+	options?: RequestInit,
+	expectedStatuses?: readonly number[],
+): Promise<unknown>;
+export function apiRequest<T>(
+	path: string,
+	options: RequestInit,
+	expectedStatuses: readonly number[],
+	parseResponse: ApiResponseParser<T>,
+): Promise<T>;
 export async function apiRequest<T>(
 	path: string,
 	options: RequestInit = {},
-	expectedStatuses?: readonly number[],
-): Promise<T> {
+	expectedStatuses: readonly number[] = [200],
+	parseResponse?: ApiResponseParser<T>,
+): Promise<T | unknown> {
 	const user = auth.currentUser;
 
 	if (!user) {
@@ -37,15 +74,22 @@ export async function apiRequest<T>(
 
 	const idToken = await user.getIdToken();
 	options.signal?.throwIfAborted();
+	const isMutation = !['GET', 'HEAD'].includes((options.method ?? 'GET').toUpperCase());
 
-	const response = await fetch(`${API_BASE_URL}${path}`, {
-		...options,
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${idToken}`,
-			...options.headers,
-		},
-	});
+	let response: Response;
+	try {
+		response = await fetch(`${API_BASE_URL}${path}`, {
+			...options,
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${idToken}`,
+				...options.headers,
+			},
+		});
+	} catch (error) {
+		if (isMutation) throw new ApiOutcomeUnknownError();
+		throw error;
+	}
 
 	if (!response.ok) {
 		if (path.startsWith('/api/admin/')) {
@@ -70,11 +114,20 @@ export async function apiRequest<T>(
 				}
 			} catch { /* Keep the HTTP status even when the error body is unreadable. */ }
 		}
-		throw new ApiError(response.status, validationMessage, code);
+		throw new ApiError(response.status, validationMessage, code, isMutation && (response.status === 408 || response.status >= 500));
 	}
 
-	if (expectedStatuses && !expectedStatuses.includes(response.status)) {
-		throw new ApiError(response.status);
+	if (!expectedStatuses.includes(response.status)) {
+		throw new ApiError(response.status, undefined, undefined, isMutation);
 	}
-	return response.json() as Promise<T>;
+	if (!parseResponse) {
+		const body: unknown = await response.json();
+		return body;
+	}
+	try {
+		const body: unknown = await response.json();
+		return parseResponse(body);
+	} catch {
+		throw new ApiResponseError(response.status, isMutation);
+	}
 }

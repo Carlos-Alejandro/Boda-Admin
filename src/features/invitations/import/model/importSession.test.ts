@@ -10,7 +10,11 @@ const { auth } = vi.hoisted(() => {
   return { auth: { currentUser: { getIdToken: vi.fn().mockResolvedValue('private-token') } as { getIdToken: () => Promise<string> } | null } };
 });
 vi.mock('../../../../config/firebase', () => ({ auth }));
-const response = (status = 201, id = 'REAL001') => new Response(JSON.stringify(status < 300 ? { id, version: 'v1' } : { error: { code: status === 409 ? 'IDEMPOTENCY_CONFLICT' : 'ERROR', message: 'internal private' } }), { status });
+const response = (status = 201, id = 'REAL001') => new Response(JSON.stringify(status < 300 ? {
+  id, version: 'iv1.test', displayName: 'Familia', maxGuests: 1, replacementsAllowed: false,
+  rsvpStatus: 'pending', message: '', isArchived: false, archivedAt: null, updatedAt: null, editOverrideUntil: null,
+  guests: [{ name: '', shortName: 'Acompañante', type: 'open', attending: null }],
+} : { error: { code: status === 409 ? 'IDEMPOTENCY_CONFLICT' : 'ERROR', message: 'internal private' } }), { status });
 const signal = () => new AbortController().signal;
 const observe = () => {
   let session: ImportSession | undefined;
@@ -277,13 +281,16 @@ describe('recuperación y reconciliación', () => {
     await expect(resumeImportSession(original.id, signal(), () => {}, sessionDependencies, original)).rejects.toThrow(/claves/);
     expect(fetch).not.toHaveBeenCalled();
   });
-  it('solo conserva la versión de respuesta si respeta el tipo del contrato', async () => {
+  it('respuesta 200 con invitación inválida queda unknown y conserva su clave original', async () => {
     const original = await storedUnknown();
     vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ id: 'REAL', version: { privateData: 'must not persist' } }), { status: 200 }));
     await resumeImportSession(original.id, signal(), () => {});
     const stored = (await importSessionStore.load())!;
-    expect(stored.items[0].invitationId).toBe('REAL');
+    expect(stored.items[0].status).toBe('unknown');
+    expect(stored.items[0].invitationId).toBeUndefined();
     expect(stored.items[0].version).toBeUndefined();
+    expect(stored.items[0].idempotencyKey).toBe(original.items[0].idempotencyKey);
+    expect(stored.items[0].mayHaveBeenCreated).toBe(true);
     expect(JSON.stringify(stored)).not.toContain('privateData');
   });
   it('descarte es solo local, no hace rollback y no permite resucitar callbacks de otra pestaña', async () => {

@@ -58,7 +58,7 @@ export interface ChangeInvitationCapacityInput {
 export interface InvitationListResponse {
 	items: Invitation[];
 	total: number;
-	page?: number;
-	pageSize?: number;
-	totalPages?: number;
+	page: number;
+	pageSize: number;
+	totalPages: number;
 }

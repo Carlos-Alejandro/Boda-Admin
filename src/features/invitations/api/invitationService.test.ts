@@ -8,9 +8,18 @@ const { getIdToken } = vi.hoisted(() => {
 });
 vi.mock('../../../config/firebase', () => ({ auth: { currentUser: { getIdToken } } }));
 const payload = { displayName: 'Familia', knownGuests: [{ name: 'B' }, { name: 'A' }], openSlots: 1, replacementsAllowed: true };
+const createdInvitation = {
+  id: 'real', version: 'v1', displayName: 'Familia', maxGuests: 3, replacementsAllowed: true,
+  rsvpStatus: 'pending', message: '', isArchived: false, archivedAt: null, updatedAt: null, editOverrideUntil: null,
+  guests: [
+    { name: 'B', shortName: 'B', type: 'known', attending: null },
+    { name: 'A', shortName: 'A', type: 'known', attending: null },
+    { name: '', shortName: 'Acompañante', type: 'open', attending: null },
+  ],
+};
 beforeEach(() => {
   getIdToken.mockResolvedValue('test-token');
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: 'real', version: 'v1' }), { status: 201 })));
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(createdInvitation), { status: 201 })));
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
@@ -22,7 +31,7 @@ it('la creación manual sigue enviando el body original sin Idempotency-Key', as
   expect(JSON.parse(options!.body as string)).toEqual(payload);
 });
 it.each([200, 201])('acepta %s con header exacto y sin agregar claves al JSON', async status => {
-  vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ id: 'real', version: 'v1' }), { status }));
+  vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify(createdInvitation), { status }));
   const result = await createInvitation(payload, { idempotencyKey: 'boda-import-v1:example' });
   expect(result.id).toBe('real');
   const options = vi.mocked(fetch).mock.calls[0][1]!;
@@ -57,13 +66,23 @@ it('serializa búsqueda, filtros y paginación real en GET', async () => {
 });
 
 it('omite archived al consultar Todas para permitir la lista completa existente', async () => {
-  vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }));
+  vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ items: [], total: 0, page: 1, pageSize: 15, totalPages: 0 }), { status: 200 }));
   await getInvitations({ page: 1, pageSize: 15 });
   expect(vi.mocked(fetch).mock.calls[0][0]).toBe('https://api.test/api/admin/invitations?page=1&pageSize=15');
 });
 
+it.each([200, 202, 206])('rechaza HTTP %s al crear manualmente porque el contrato exige 201', async status => {
+  vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify(createdInvitation), { status }));
+  await expect(createInvitation(payload)).rejects.toMatchObject({ status, mayHaveCompleted: true });
+});
+
+it('rechaza una respuesta 201 incompleta como resultado ambiguo', async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ id: 'real', version: 'v1' }), { status: 201 }));
+  await expect(createInvitation(payload)).rejects.toMatchObject({ name: 'ApiResponseError', status: 201, mayHaveCompleted: true });
+});
+
 it.each([200, 201, 202, 206])('HTTP %s solo confirma creación si es 200/201, conservando orden y autenticación', async status => {
-  vi.mocked(fetch).mockImplementation(async () => new Response(JSON.stringify({ id: 'real', version: 'v1' }), { status }));
+  vi.mocked(fetch).mockImplementation(async () => new Response(JSON.stringify(createdInvitation), { status }));
   let items: ImportItem[] = [2, 5].map(row => ({
     row, displayName: `Fila ${row}`, payload: { ...payload, displayName: `Fila ${row}` },
     idempotencyKey: `boda-import-v1:${crypto.randomUUID()}`, status: 'pending',

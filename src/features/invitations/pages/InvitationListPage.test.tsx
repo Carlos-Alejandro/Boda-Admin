@@ -93,6 +93,7 @@ describe('listado de invitaciones', () => {
 		const load = async (filters: InvitationFilters = {}) => ({
 			items: filters.archived === true ? [archived] : filters.archived === false ? [active] : [active, archived],
 			total: filters.archived === true || filters.archived === false ? 1 : 2,
+			page: 1, pageSize: 15, totalPages: 1,
 		});
 		mount({ items: [active, archived], load });
 		await ready();
@@ -188,8 +189,8 @@ describe('listado de invitaciones', () => {
 	it('archiva con confirmación y quita el registro de la lista activa', async () => {
 		let archivedNow = false;
 		const load = async (filters: InvitationFilters = {}) => filters.archived
-			? { items: archivedNow ? [{ ...active, isArchived: true, archivedAt: '2026-10-08T12:00:00.000Z' }] : [], total: Number(archivedNow) }
-			: { items: archivedNow ? [] : [active], total: Number(!archivedNow) };
+			? { items: archivedNow ? [{ ...active, isArchived: true, archivedAt: '2026-10-08T12:00:00.000Z' }] : [], total: Number(archivedNow), page: 1, pageSize: 15, totalPages: Number(archivedNow) }
+			: { items: archivedNow ? [] : [active], total: Number(!archivedNow), page: 1, pageSize: 15, totalPages: Number(!archivedNow) };
 		vi.mocked(archiveInvitation).mockImplementation(async () => {
 			archivedNow = true;
 			return { ...active, isArchived: true, archivedAt: '2026-10-08T12:00:00.000Z' };
@@ -211,8 +212,8 @@ describe('listado de invitaciones', () => {
 	it('restaura desde Archivadas y elimina el registro de esa lista', async () => {
 		let restored = false;
 		const load = async (filters: InvitationFilters = {}) => filters.archived
-			? { items: restored ? [] : [archived], total: Number(!restored) }
-			: { items: restored ? [{ ...archived, isArchived: false, archivedAt: null }] : [], total: Number(restored) };
+			? { items: restored ? [] : [archived], total: Number(!restored), page: 1, pageSize: 15, totalPages: Number(!restored) }
+			: { items: restored ? [{ ...archived, isArchived: false, archivedAt: null }] : [], total: Number(restored), page: 1, pageSize: 15, totalPages: Number(restored) };
 		vi.mocked(restoreInvitation).mockImplementation(async () => {
 			restored = true;
 			return { ...archived, isArchived: false, archivedAt: null };

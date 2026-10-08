@@ -3,6 +3,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { Button, ButtonLink } from '../../../shared/components/Button/Button';
 import { PageHeader } from '../../../shared/components/PageHeader/PageHeader';
 import { notify } from '../../../shared/notifications/notify';
+import { ApiError, ApiOutcomeUnknownError, ApiResponseError } from '../../../services/http/apiClient';
 import { createInvitation } from '../api/invitationService';
 import { CreateInvitationIcon } from '../components/CreateInvitationIcon';
 import { InvitationSummary } from '../components/InvitationSummary';
@@ -13,7 +14,7 @@ import type {
 import { getPublicInvitationUrl } from '../model/publicInvitationUrl';
 import './CreateInvitationPage.css';
 
-type FormStatus = 'idle' | 'submitting' | 'error';
+type FormStatus = 'idle' | 'submitting' | 'error' | 'unknown';
 
 interface FormErrors {
 	displayName?: string;
@@ -131,7 +132,7 @@ export function CreateInvitationPage() {
 
 	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
-		if (submittingRef.current) return;
+		if (submittingRef.current || status === 'unknown') return;
 
 		const input = validate();
 		if (!input) return;
@@ -143,7 +144,14 @@ export function CreateInvitationPage() {
 			const invitation = await createInvitation(input);
 			setCreatedInvitation(invitation);
 			setStatus('idle');
-		} catch {
+		} catch (error) {
+			const outcomeMayHaveCompleted = error instanceof ApiOutcomeUnknownError ||
+				(error instanceof ApiResponseError && error.mayHaveCompleted) ||
+				(error instanceof ApiError && error.mayHaveCompleted);
+			if (outcomeMayHaveCompleted) {
+				setStatus('unknown');
+				return;
+			}
 			setStatus('error');
 			notify.error('No se pudo crear la invitación', {
 				description: 'Revisa los datos e inténtalo nuevamente.',
@@ -154,6 +162,8 @@ export function CreateInvitationPage() {
 	};
 
 	const isSubmitting = status === 'submitting';
+	const isOutcomeUnknown = status === 'unknown';
+	const formDisabled = isSubmitting || isOutcomeUnknown;
 	const namedPeopleCount = knownGuests.filter((name) => name.trim()).length;
 	const parsedVisualOpenSlots = Number(openSlots);
 	const visualOpenSlots =
@@ -186,7 +196,7 @@ export function CreateInvitationPage() {
 								value={displayName}
 								onChange={(event) => setDisplayName(event.target.value)}
 								placeholder="Ej. Familia Ruiz"
-								disabled={isSubmitting}
+								disabled={formDisabled}
 							/>
 							{errors.displayName && <p className="create-invitation-form__inline-error">{errors.displayName}</p>}
 						</div>
@@ -205,7 +215,7 @@ export function CreateInvitationPage() {
 									inputMode="numeric"
 									value={openSlots}
 									onChange={(event) => setOpenSlots(event.target.value)}
-									disabled={isSubmitting}
+									disabled={formDisabled}
 								/>
 							</div>
 							<p className="create-invitation-form__help">Lugares disponibles para acompañantes que todavía no tienen un nombre definido.</p>
@@ -213,7 +223,7 @@ export function CreateInvitationPage() {
 						</div>
 					</div>
 
-					<fieldset className="create-invitation-form__row" disabled={isSubmitting}>
+					<fieldset className="create-invitation-form__row" disabled={formDisabled}>
 						<legend className="visually-hidden">Personas incluidas</legend>
 						<span className="create-invitation-form__icon"><CreateInvitationIcon kind="people" /></span>
 						<div className="create-invitation-form__row-content">
@@ -248,7 +258,7 @@ export function CreateInvitationPage() {
 								<p className="create-invitation-form__help">Permite que una persona que no asistirá pueda ser sustituida por otra.</p>
 							</div>
 							<label className="create-invitation-form__switch">
-								<input type="checkbox" checked={replacementsAllowed} onChange={(event) => setReplacementsAllowed(event.target.checked)} disabled={isSubmitting} />
+								<input type="checkbox" checked={replacementsAllowed} onChange={(event) => setReplacementsAllowed(event.target.checked)} disabled={formDisabled} />
 								<span className="visually-hidden">Permitir sustituciones</span>
 							</label>
 						</div>
@@ -262,9 +272,10 @@ export function CreateInvitationPage() {
 						<p>El resumen se actualiza mientras completas la invitación.</p>
 					</div>
 					{errors.capacity && <p className="create-invitation-form__alert">{errors.capacity}</p>}
+					{isOutcomeUnknown && <p role="alert" className="create-invitation-form__alert">No se pudo confirmar el resultado. La invitación podría haberse creado. Revisa el listado antes de volver a intentarlo. <ButtonLink variant="text" to="/invitaciones">Ir al listado</ButtonLink></p>}
 					<div className="create-invitation-form__actions">
 						<ButtonLink variant="secondary" to="/invitaciones">Cancelar</ButtonLink>
-						<Button variant="primary" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Creando...' : 'Crear invitación'}</Button>
+						<Button variant="primary" type="submit" disabled={formDisabled}>{isSubmitting ? 'Creando...' : 'Crear invitación'}</Button>
 					</div>
 				</div>
 			</form>
