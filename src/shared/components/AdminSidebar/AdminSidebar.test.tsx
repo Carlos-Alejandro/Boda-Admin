@@ -15,7 +15,7 @@ const accountUser = { displayName: 'María Pérez', email: 'maria@example.com' }
 
 function mount(path = '/') {
 	return render(
-		<AuthContext.Provider value={{ user: accountUser, loading: false, signingOut: false, login: vi.fn(), logout }}>
+		<AuthContext.Provider value={{ user: accountUser, loading: false, signingOut: false, authorization: 'authorized', retryAuthorization: vi.fn(), login: vi.fn(), logout }}>
 			<MemoryRouter initialEntries={[path]}>
 				<Routes>
 					<Route element={<AdminLayout />}>

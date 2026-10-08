@@ -5,6 +5,8 @@ export interface AuthContextValue {
 	user: User | null;
 	loading: boolean;
 	signingOut: boolean;
+	authorization: 'checking' | 'authorized' | 'unauthorized' | 'error';
+	retryAuthorization: () => void;
 	login: () => Promise<void>;
 	logout: () => Promise<void>;
 }

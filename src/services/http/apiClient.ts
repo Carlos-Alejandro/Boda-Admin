@@ -1,4 +1,8 @@
 import { auth } from '../../config/firebase';
+import {
+	notifyAdminAuthenticationFailed,
+	notifyAdminAuthorizationDenied,
+} from '../../auth/authorizationEvents';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -44,6 +48,10 @@ export async function apiRequest<T>(
 	});
 
 	if (!response.ok) {
+		if (path.startsWith('/api/admin/')) {
+			if (response.status === 401) notifyAdminAuthenticationFailed(user.uid);
+			if (response.status === 403) notifyAdminAuthorizationDenied(user.uid);
+		}
 		let validationMessage: string | undefined;
 		let code: string | undefined;
 		if (response.status === 400 || response.status === 409) {
