@@ -91,6 +91,22 @@ describe('detalle de la invitación', () => {
     expect(within(people).queryByText('Lugar sin asignar')).toBeNull();
   });
 
+  it('keeps unassigned open places free when the invitation is declined', async () => {
+    await mount({
+      rsvpStatus: 'declined',
+      maxGuests: 2,
+      guests: [
+        { name: '', shortName: 'Acompañante', type: 'open', attending: false },
+        { name: '', shortName: 'Acompañante', type: 'open', attending: false },
+      ],
+    });
+    const people = screen.getByRole('region', { name: 'Personas' });
+    expect(within(people).getAllByText('Lugar sin asignar')).toHaveLength(2);
+    expect(within(people).queryByText('No asiste')).toBeNull();
+    expect(within(people).getByText('2 lugares libres')).toBeTruthy();
+    expect(screen.getByText('Declinada')).toBeTruthy();
+  });
+
   it('muestra asistencia, capacidad y lugares libres dentro de Personas y copia el enlace', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
