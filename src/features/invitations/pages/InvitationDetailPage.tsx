@@ -1,4 +1,4 @@
-import { type PointerEvent, type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ApiError } from '../../../services/http/apiClient';
 import { Button, ButtonLink } from '../../../shared/components/Button/Button';
@@ -26,33 +26,11 @@ function formatDate(value: string | null, fallback = 'Fecha no disponible') {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? fallback : dateFormatter.format(date);
 }
-const guestLabels: Record<GuestType, string> = {
-  known: 'Invitado', open: 'Lugar sin asignar', replacement: 'Invitado de sustitución',
-};
+function guestLabel(type: GuestType, hasName: boolean) {
+  if (type === 'open') return hasName ? 'Acompañante' : 'Lugar sin asignar';
+  return type === 'known' ? 'Invitado' : 'Invitado de sustitución';
+}
 type DetailState = { status: 'loading' | 'not-found' | 'error' } | { status: 'success'; invitation: Invitation };
-type CardKey = 'people' | 'data' | 'admin';
-interface CardDragSession {
-  pointerId: number;
-  source: CardKey;
-  sourceIndex: number;
-  startY: number;
-  rects: Map<CardKey, DOMRect>;
-  targetIndex: number;
-  active: boolean;
-}
-const defaultCardOrder: CardKey[] = ['people', 'data', 'admin'];
-const cardTitles: Record<CardKey, string> = { people: 'Personas', data: 'Datos de la invitación', admin: 'Administración' };
-const cardOrderStorageKey = 'boda-admin:invitation-detail-card-order:v1';
-
-function readCardOrder(): CardKey[] {
-  try {
-    const saved = JSON.parse(localStorage.getItem(cardOrderStorageKey) || 'null');
-    if (Array.isArray(saved) && saved.length === defaultCardOrder.length && defaultCardOrder.every((key) => saved.includes(key))) return saved as CardKey[];
-  } catch {
-    // Browser storage may be unavailable; keep the default order for this session.
-  }
-  return [...defaultCardOrder];
-}
 
 function DetailIcon({ name }: { name: 'people' | 'invitation' | 'settings' }) {
   const paths = {
@@ -62,9 +40,17 @@ function DetailIcon({ name }: { name: 'people' | 'invitation' | 'settings' }) {
   };
   return <span className="invitation-detail__section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg></span>;
 }
-function DetailSection({ title, icon, description, children, action, orderControls }: { title: string; icon: 'people' | 'invitation' | 'settings'; description: string; children: ReactNode; action?: ReactNode; orderControls: ReactNode }) {
+function AttendanceIcon({ name }: { name: 'attending' | 'capacity' | 'available' }) {
+  const paths = {
+    attending: <><circle cx="9" cy="7" r="3" /><path d="M3.5 20v-1a5.5 5.5 0 0 1 11 0v1M16 11l2 2 4-4" /></>,
+    capacity: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>,
+    available: <><circle cx="12" cy="12" r="9" /><path d="M12 8v8m-4-4h8" /></>,
+  };
+  return <span className="invitation-detail__attendance-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg></span>;
+}
+function DetailSection({ title, icon, description, children, action }: { title: string; icon: 'people' | 'invitation' | 'settings'; description: string; children: ReactNode; action?: ReactNode }) {
   return <section className="invitation-detail__section" aria-label={title}>
-    <div className="invitation-detail__section-heading"><div className="invitation-detail__section-intro"><DetailIcon name={icon} /><div><h2>{title}</h2><p>{description}</p></div></div><div className="invitation-detail__section-actions">{action}{orderControls}</div></div>
+    <div className="invitation-detail__section-heading"><div className="invitation-detail__section-intro"><DetailIcon name={icon} /><div><h2>{title}</h2><p>{description}</p></div></div>{action && <div className="invitation-detail__section-actions">{action}</div>}</div>
     {children}
   </section>;
 }
@@ -91,36 +77,9 @@ function InvitationDetail({ id }: { id: string | undefined }) {
   const [overrideAction, setOverrideAction] = useState<OverrideAction | null>(null);
   const [changingArchive, setChangingArchive] = useState(false);
   const [notice, setNotice] = useState('');
-  const [cardOrder, setCardOrder] = useState<CardKey[]>(readCardOrder);
-  const [draggedCard, setDraggedCard] = useState<CardKey | null>(null);
-  const [dropCard, setDropCard] = useState<CardKey | null>(null);
-  const [orderAnnouncement, setOrderAnnouncement] = useState('');
-  const dragSession = useRef<CardDragSession | null>(null);
-  const cardList = useRef<HTMLDivElement>(null);
   const menuAnchor = useRef<HTMLDivElement>(null);
   const menuPanel = useRef<HTMLDivElement>(null);
   const menuSpace = useViewportPopover(openMenuIndex !== null, menuAnchor, menuPanel, openMenuIndex);
-  const beforeMove = useRef<Map<CardKey, DOMRect> | null>(null);
-
-  useLayoutEffect(() => {
-    const previous = beforeMove.current;
-    if (!previous) return;
-    beforeMove.current = null;
-    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const elements = cardList.current?.querySelectorAll<HTMLElement>('[data-card-key]');
-    if (!reducedMotion) elements?.forEach((element) => {
-      const oldRect = previous.get(element.dataset.cardKey as CardKey);
-      if (!oldRect) return;
-      const distance = oldRect.top - element.getBoundingClientRect().top;
-      if (Math.abs(distance) < 1) return;
-      element.getAnimations?.().forEach((animation) => animation.cancel());
-      element.animate?.(
-        [{ transform: `translate3d(0, ${distance}px, 0)` }, { transform: 'translate3d(0, 0, 0)' }],
-        { duration: 280, easing: 'cubic-bezier(.22, 1, .36, 1)' },
-      );
-    });
-    requestAnimationFrame(() => elements?.forEach((element) => { element.style.transition = ''; }));
-  }, [cardOrder]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -164,88 +123,13 @@ function InvitationDetail({ id }: { id: string | undefined }) {
       notify.error('No se pudo copiar el enlace', { description: 'Inténtalo nuevamente.' });
     }
   };
-  const confirmedCount = invitation?.guests.filter((guest) => guest.attending === true).length ?? 0;
-  const pendingCount = invitation?.guests.filter((guest) => guest.attending === null).length ?? 0;
-  const readCardRects = () => new Map<CardKey, DOMRect>(Array.from(cardList.current?.querySelectorAll<HTMLElement>('[data-card-key]') ?? [], (element) => [element.dataset.cardKey as CardKey, element.getBoundingClientRect()]));
-  const clearCardTransforms = (immediate = false) => cardList.current?.querySelectorAll<HTMLElement>('[data-card-key]').forEach((element) => {
-    if (immediate) element.style.transition = 'none';
-    element.style.transform = '';
-  });
-  const moveCard = (source: CardKey, target: CardKey, previous?: Map<CardKey, DOMRect>) => {
-    if (source === target) return;
-    beforeMove.current = previous ?? readCardRects();
-    const movingDown = cardOrder.indexOf(source) < cardOrder.indexOf(target);
-    const next = cardOrder.filter((key) => key !== source);
-    next.splice(next.indexOf(target) + (movingDown ? 1 : 0), 0, source);
-    setCardOrder(next);
-    setOrderAnnouncement(`Tarjeta ${cardTitles[source]} movida a la posición ${next.indexOf(source) + 1}.`);
-    try { localStorage.setItem(cardOrderStorageKey, JSON.stringify(next)); } catch { /* The current page still keeps the selected order. */ }
-  };
-  const startCardDrag = (event: PointerEvent<HTMLDivElement>, key: CardKey) => {
-    if (!idle || event.button !== 0 || event.pointerType === 'touch' || (event.target instanceof Element && event.target.closest('button, a, input, textarea, select'))) return;
-    dragSession.current = { pointerId: event.pointerId, source: key, sourceIndex: cardOrder.indexOf(key), startY: event.clientY, rects: readCardRects(), targetIndex: cardOrder.indexOf(key), active: false };
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-  };
-  const moveCardDrag = (event: PointerEvent<HTMLDivElement>) => {
-    const session = dragSession.current;
-    if (!session || session.pointerId !== event.pointerId) return;
-    const offset = event.clientY - session.startY;
-    if (!session.active && Math.abs(offset) < 6) return;
-    if (!session.active) { session.active = true; window.getSelection()?.removeAllRanges(); setDraggedCard(session.source); }
-    event.preventDefault();
-    const sourceRect = session.rects.get(session.source);
-    if (!sourceRect) return;
-    event.currentTarget.style.transform = `translate3d(0, ${offset}px, 0)`;
-    const center = sourceRect.top + sourceRect.height / 2 + offset;
-    let targetIndex = session.sourceIndex;
-    if (offset > 0) {
-      for (let index = session.sourceIndex + 1; index < cardOrder.length; index++) {
-        const rect = session.rects.get(cardOrder[index]);
-        if (rect && center > rect.top + rect.height / 2) targetIndex = index;
-      }
-    } else {
-      for (let index = session.sourceIndex - 1; index >= 0; index--) {
-        const rect = session.rects.get(cardOrder[index]);
-        if (rect && center < rect.top + rect.height / 2) targetIndex = index;
-      }
-    }
-    if (targetIndex === session.targetIndex) return;
-    session.targetIndex = targetIndex;
-    setDropCard(targetIndex === session.sourceIndex ? null : cardOrder[targetIndex]);
-    const nextRect = session.rects.get(cardOrder[session.sourceIndex + 1]);
-    const gap = nextRect ? Math.max(0, nextRect.top - sourceRect.bottom) : 16;
-    const shift = sourceRect.height + gap;
-    cardList.current?.querySelectorAll<HTMLElement>('[data-card-key]').forEach((element) => {
-      const index = cardOrder.indexOf(element.dataset.cardKey as CardKey);
-      if (index === session.sourceIndex) return;
-      const displaced = targetIndex > session.sourceIndex
-        ? index > session.sourceIndex && index <= targetIndex
-        : index >= targetIndex && index < session.sourceIndex;
-      element.style.transform = displaced ? `translate3d(0, ${targetIndex > session.sourceIndex ? -shift : shift}px, 0)` : '';
-    });
-  };
-  const endCardDrag = (event: PointerEvent<HTMLDivElement>) => {
-    const session = dragSession.current;
-    if (!session || session.pointerId !== event.pointerId) return;
-    const previous = session.active ? readCardRects() : undefined;
-    const changed = session.active && session.targetIndex !== session.sourceIndex;
-    clearCardTransforms(changed);
-    dragSession.current = null;
-    setDraggedCard(null);
-    setDropCard(null);
-    if (changed && previous) moveCard(session.source, cardOrder[session.targetIndex], previous);
-    event.currentTarget.releasePointerCapture?.(event.pointerId);
-  };
-  const cancelCardDrag = () => { clearCardTransforms(); dragSession.current = null; setDraggedCard(null); setDropCard(null); };
-  const cardOrderControls = (key: CardKey, index: number) => <div className="invitation-detail__order-controls">
-    <span className="invitation-detail__drag-grip" aria-hidden="true" title="Arrastra la tarjeta para moverla">⠿</span>
-    <button type="button" aria-label={`Mover ${cardTitles[key]} arriba`} title="Mover arriba" disabled={!idle || index === 0} onClick={() => moveCard(key, cardOrder[index - 1])}>↑</button>
-    <button type="button" aria-label={`Mover ${cardTitles[key]} abajo`} title="Mover abajo" disabled={!idle || index === cardOrder.length - 1} onClick={() => moveCard(key, cardOrder[index + 1])}>↓</button>
-  </div>;
+  const identifiedGuests = invitation?.guests.filter((guest) => guest.name.trim() !== '') ?? [];
+  const attendingCount = identifiedGuests.filter((guest) => guest.attending === true).length;
+  const freePlaces = invitation?.guests.filter((guest) => guest.type === 'open' && guest.name.trim() === '').length ?? 0;
 
   return <section className="invitation-detail" aria-labelledby="invitation-detail-title">
     <ButtonLink variant="text" to="/invitaciones" className="invitation-detail__back">← Volver a invitaciones</ButtonLink>
-    <header className="invitation-detail__header"><div><p className="invitation-detail__eyebrow">Gestión de invitaciones</p><h1 id="invitation-detail-title">Detalles de la invitación</h1><p className="invitation-detail__description">Consulta las respuestas y ajusta la información de esta invitación.</p></div>{invitation && <div className="invitation-detail__header-actions"><InvitationStatusBadge status={invitation.rsvpStatus} />{!invitation.isArchived && <Button variant="secondary" type="button" onClick={() => void copyLink()}>Copiar enlace</Button>}</div>}</header>
+    <header className="invitation-detail__header"><div><p className="invitation-detail__eyebrow">Gestión de invitaciones</p><h1 id="invitation-detail-title">Detalles de la invitación</h1><p className="invitation-detail__description">Consulta las respuestas y ajusta la información de esta invitación.</p></div>{invitation && <div className="invitation-detail__header-actions"><InvitationStatusBadge status={invitation.rsvpStatus} variant="prominent" />{!invitation.isArchived && <Button variant="secondary" type="button" onClick={() => void copyLink()}>Copiar enlace</Button>}</div>}</header>
     {notice && state.status !== 'not-found' && <p role="status" className="invitation-detail__notice">{notice}</p>}
     {state.status === 'loading' && <p role="status" className="invitation-detail__feedback">Cargando invitación...</p>}
     {(state.status === 'not-found' || state.status === 'error') && <div role="alert" className="invitation-detail__feedback">
@@ -254,32 +138,27 @@ function InvitationDetail({ id }: { id: string | undefined }) {
       {state.status === 'error' && <Button variant="secondary" type="button" onClick={() => reload()}>Reintentar</Button>}
     </div>}
     {invitation && <>
-      <div className="invitation-detail__overview" aria-label="Resumen de la invitación">
-        <div><span>Lugares</span><strong>{invitation.maxGuests}</strong><small>Capacidad total</small></div>
-        <div><span>Confirmados</span><strong>{confirmedCount}</strong><small>Asistirán</small></div>
-        <div><span>Pendientes</span><strong>{pendingCount}</strong><small>Sin respuesta</small></div>
-      </div>
-      <p className="invitation-detail__reorder-help">Arrastra las tarjetas para cambiar su orden o usa las flechas de cada una.</p>
-      <p className="visually-hidden" role="status" aria-live="polite">{orderAnnouncement}</p>
-      <div ref={cardList} className="invitation-detail__card-list">
-      {cardOrder.map((card, index) => <div key={card} data-card-key={card} className={`invitation-detail__card-slot invitation-detail__card-slot--${index + 1}${draggedCard === card ? ' is-dragging' : ''}${dropCard === card && draggedCard !== card ? ` is-drop-target ${draggedCard && cardOrder.indexOf(draggedCard) < index ? 'is-drop-after' : 'is-drop-before'}` : ''}`} onPointerDown={(event) => startCardDrag(event, card)} onPointerMove={moveCardDrag} onPointerUp={endCardDrag} onPointerCancel={cancelCardDrag}>
-      {card === 'people' ? <DetailSection title={`Personas (${invitation.guests.length})`} icon="people" description="Asistencia y lugares de esta invitación" orderControls={cardOrderControls(card, index)} action={<div className="invitation-detail__places">
-        <span>{invitation.maxGuests} {invitation.maxGuests === 1 ? 'lugar' : 'lugares'}</span>
-        {idle && <><span aria-hidden="true">·</span><TextAction onClick={() => { setNotice(''); setChangingCapacity(true); }}>Ajustar lugares</TextAction></>}
-      </div>}>
+      <div className="invitation-detail__sections">
+      <DetailSection title="Personas" icon="people" description="Personas identificadas y lugares abiertos de esta invitación" action={idle && <TextAction onClick={() => { setNotice(''); setChangingCapacity(true); }}>Ajustar lugares</TextAction>}>
+        <div className="invitation-detail__attendance" role="group" aria-label="Resumen de asistencia">
+          <div className="invitation-detail__attendance-item"><AttendanceIcon name="capacity" /><span>{invitation.maxGuests} {invitation.maxGuests === 1 ? 'lugar en total' : 'lugares en total'}</span></div>
+          <div className="invitation-detail__attendance-item"><AttendanceIcon name="attending" /><span>{attendingCount} {attendingCount === 1 ? 'asistirá' : 'asistirán'}</span></div>
+          <div className="invitation-detail__attendance-item"><AttendanceIcon name="available" /><span>{freePlaces} {freePlaces === 1 ? 'lugar libre' : 'lugares libres'}</span></div>
+        </div>
         {changingCapacity && <InvitationCapacityForm invitation={invitation} onCancel={() => setChangingCapacity(false)} onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setChangingCapacity(false); notify.success('Lugares actualizados'); }} onUnavailable={() => { setChangingCapacity(false); unavailable(); }} onReload={() => { setChangingCapacity(false); reload(); }} />}
         <ol className="invitation-detail__people">
           {invitation.guests.map((guest, index) => {
             const canEdit = guest.name.trim() !== '';
             const canRemove = guest.type === 'known' || guest.type === 'open';
+            const isUnassignedSpace = guest.type === 'open' && guest.name.trim() === '';
             return <li key={index} className="invitation-detail__person">
               <span className="invitation-detail__person-number">{index + 1}</span>
-              <div className="invitation-detail__person-info"><h3>{guest.name.trim() || guest.shortName || 'Acompañante'}</h3><p>{guestLabels[guest.type]}</p>
+              <div className="invitation-detail__person-info"><h3>{guest.name.trim() || guest.shortName || 'Acompañante'}</h3><p>{guestLabel(guest.type, guest.name.trim() !== '')}</p>
                 {guest.type === 'replacement' && <p>Invitado original: {guest.originalName || 'Nombre no disponible'}</p>}
               </div>
-              <span className={`invitation-detail__person-status ${guest.attending === true ? 'is-attending' : guest.attending === false ? 'is-declined' : 'is-pending'}`}>
+              {!isUnassignedSpace && <span className={`invitation-detail__person-status ${guest.attending === true ? 'is-attending' : guest.attending === false ? 'is-declined' : 'is-pending'}`}>
                 {guest.attending === true ? 'Asiste' : guest.attending === false ? 'No asiste' : 'Sin respuesta'}
-              </span>
+              </span>}
               {idle && (canEdit || canRemove || guest.type === 'replacement') && <div ref={openMenuIndex === index ? menuAnchor : undefined} className="invitation-detail__menu-wrap">
                 <button type="button" className="invitation-detail__menu-trigger" aria-label={`Acciones para ${guest.name.trim() || guest.shortName || `persona ${index + 1}`}`} aria-expanded={openMenuIndex === index} aria-controls={openMenuIndex === index ? `invitation-detail-menu-${index}` : undefined} onClick={() => setOpenMenuIndex(openMenuIndex === index ? null : index)}>⋮</button>
                 {openMenuIndex === index && <div ref={menuPanel} id={`invitation-detail-menu-${index}`} className={`invitation-detail__menu${menuSpace.above ? ' invitation-detail__menu--above' : ''}`} style={{ maxHeight: menuSpace.maxHeight }}>
@@ -296,7 +175,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
           })}
         </ol>
       </DetailSection>
-      : card === 'data' ? <DetailSection title="Datos de la invitación" icon="invitation" description="Información que identifica y acompaña esta invitación" orderControls={cardOrderControls(card, index)}>
+      <DetailSection title="Datos de la invitación" icon="invitation" description="Información que identifica y acompaña esta invitación">
         <dl className="invitation-detail__data">
           <DetailRow label="Nombre" action={idle && <TextAction onClick={() => { setNotice(''); setEditing('name'); }}>Editar nombre</TextAction>}>{invitation.displayName}</DetailRow>
           <DetailRow label="Código">{invitation.id}</DetailRow>
@@ -305,7 +184,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
         </dl>
         {editing && <InvitationEditForm key={editing} invitation={invitation} field={editing} onCancel={() => setEditing(null)} onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setEditing(null); notify.success('Cambios guardados'); }} onUnavailable={() => { setEditing(null); unavailable(); }} onReload={() => { setEditing(null); reload(); }} />}
       </DetailSection>
-      : <DetailSection title="Administración" icon="settings" description="Permisos, estado y actividad reciente" orderControls={cardOrderControls(card, index)}>
+      <DetailSection title="Administración" icon="settings" description="Permisos, estado y actividad reciente">
         <EditInvitationOverride key={`${invitation.version}-${overrideAction}`} invitation={invitation} action={overrideAction} idle={idle} onSelect={(action) => { setNotice(''); setOverrideAction(action); }} onCancel={() => setOverrideAction(null)} onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setOverrideAction(null); notify.success(updated.editOverrideUntil === null ? 'Permiso revocado' : 'Permiso actualizado'); }} onUnavailable={() => { setOverrideAction(null); unavailable(); }} onRefresh={(message) => { setOverrideAction(null); reload(message); }} />
         <dl className="invitation-detail__data">
           <DetailRow label="Estado"><InvitationStatusBadge status={invitation.isArchived ? 'archived' : 'active'} /></DetailRow>
@@ -314,8 +193,7 @@ function InvitationDetail({ id }: { id: string | undefined }) {
         </dl>
         {idle && <div className="invitation-detail__archive"><Button variant="secondary" type="button" className={invitation.isArchived ? '' : 'text-admin-danger'} onClick={() => { setNotice(''); setChangingArchive(true); }}>{invitation.isArchived ? 'Restaurar invitación' : 'Archivar invitación'}</Button></div>}
         {changingArchive && <InvitationArchiveConfirmation invitation={invitation} onCancel={() => setChangingArchive(false)} onSaved={(updated) => { setState({ status: 'success', invitation: updated }); setChangingArchive(false); }} onUnavailable={() => { setChangingArchive(false); unavailable(); }} onRefresh={(message) => { setChangingArchive(false); reload(message); }} />}
-      </DetailSection>}
-      </div>)}
+      </DetailSection>
       </div>
     </>}
   </section>;

@@ -31,59 +31,49 @@ function mount(overrides: Partial<Invitation> = {}) {
   const invitation = { ...base, ...overrides };
   vi.mocked(getInvitationById).mockResolvedValue(invitation);
   render(<MemoryRouter initialEntries={['/invitaciones/CS7H4K2P']}><Routes><Route path="/invitaciones/:id" element={<InvitationDetailPage />} /></Routes></MemoryRouter>);
-  return screen.findByRole('heading', { name: 'Personas (2)' });
+  return screen.findByRole('heading', { name: 'Personas' });
 }
-beforeEach(() => { vi.clearAllMocks(); localStorage.clear(); });
+beforeEach(() => { vi.clearAllMocks(); });
 afterEach(cleanup);
 
 describe('detalle de la invitación', () => {
-  const cardTitles = () => Array.from(document.querySelectorAll('.invitation-detail__card-slot .invitation-detail__section h2'), (heading) => heading.textContent);
-
-  it('reordena tarjetas con los controles y conserva el orden al volver a abrir', async () => {
+  it('mantiene el orden fijo y coloca los indicadores dentro de Personas', async () => {
     await mount();
-    fireEvent.click(screen.getByRole('button', { name: 'Mover Personas abajo' }));
-    expect(cardTitles()).toEqual(['Datos de la invitación', 'Personas (2)', 'Administración']);
-    expect(JSON.parse(localStorage.getItem('boda-admin:invitation-detail-card-order:v1') || 'null')).toEqual(['data', 'people', 'admin']);
-    cleanup();
-    await mount();
-    expect(cardTitles()).toEqual(['Datos de la invitación', 'Personas (2)', 'Administración']);
-    expect(screen.getByLabelText('Resumen de la invitación').compareDocumentPosition(screen.getByRole('region', { name: 'Datos de la invitación' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const sections = Array.from(document.querySelectorAll('.invitation-detail__sections > section'), (section) => section.getAttribute('aria-label'));
+    expect(sections).toEqual(['Personas', 'Datos de la invitación', 'Administración']);
+    const people = screen.getByRole('region', { name: 'Personas' });
+    expect(within(people).getByRole('group', { name: 'Resumen de asistencia' })).toBeTruthy();
+    expect(people.compareDocumentPosition(screen.getByRole('region', { name: 'Datos de la invitación' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText('RESUMEN DE ASISTENCIA')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Mover / })).toBeNull();
+    expect(document.querySelector('.invitation-detail__drag-grip')).toBeNull();
   });
-
-  it('mueve la tarjeta con el cursor y abre espacio antes de soltarla', async () => {
-    await mount();
-    const slots = Array.from(document.querySelectorAll<HTMLElement>('.invitation-detail__card-slot'));
-    slots.forEach((slot, index) => vi.spyOn(slot, 'getBoundingClientRect').mockReturnValue({ top: index * 116, bottom: index * 116 + 100, height: 100 } as DOMRect));
-    const admin = screen.getByRole('region', { name: 'Administración' });
-    fireEvent.pointerDown(admin, { pointerId: 1, pointerType: 'mouse', button: 0, clientY: 282 });
-    fireEvent.pointerMove(admin.parentElement as HTMLElement, { pointerId: 1, pointerType: 'mouse', clientY: 20 });
-    expect(admin.parentElement?.classList.contains('is-dragging')).toBe(true);
-    expect(screen.getByRole('region', { name: 'Personas (2)' }).parentElement?.classList.contains('is-drop-before')).toBe(true);
-    fireEvent.pointerUp(admin.parentElement as HTMLElement, { pointerId: 1, pointerType: 'mouse', clientY: 20 });
-    expect(cardTitles()).toEqual(['Administración', 'Personas (2)', 'Datos de la invitación']);
-    expect(screen.getByLabelText('Resumen de la invitación').compareDocumentPosition(admin) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
   it.each([
     ['pending', 'Pendiente'], ['confirmed', 'Confirmada'], ['declined', 'Declinada'], ['partial', 'Parcial'],
   ] as const)('muestra el RSVP %s una sola vez', async (rsvpStatus, label) => {
     await mount({ rsvpStatus });
     expect(screen.getByRole('heading', { name: 'Detalles de la invitación' })).toBeTruthy();
     expect(screen.getAllByText(label)).toHaveLength(1);
+    const statusBadge = screen.getByText(label).closest('.invitation-status-badge');
+    expect(statusBadge?.classList.contains('invitation-status-badge--prominent')).toBe(true);
+    expect(statusBadge?.classList.contains(`invitation-status-badge--${rsvpStatus}`)).toBe(true);
+    expect(statusBadge?.querySelector('svg[aria-hidden="true"]')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: label })).toBeNull();
     expect(screen.getAllByText('Cassandra & Rubén')).toHaveLength(1);
     expect(screen.getAllByText('CS7H4K2P')).toHaveLength(1);
-    expect(screen.getAllByText('2 lugares')).toHaveLength(1);
+    expect(within(screen.getByRole('group', { name: 'Resumen de asistencia' })).getByText(/2 lugares en total/)).toBeTruthy();
     expect(screen.getAllByText('Gracias')).toHaveLength(1);
     expect(screen.queryByText('Información general')).toBeNull();
   });
 
   it('presenta invitados, lugar sin nombre, permisos y estado administrativo', async () => {
     await mount();
-    const people = screen.getByRole('region', { name: 'Personas (2)' });
+    const people = screen.getByRole('region', { name: 'Personas' });
     expect(within(people).getByText('Cassandra Us Hernandez')).toBeTruthy();
     expect(within(people).getByText('Lugar sin asignar')).toBeTruthy();
     expect(within(people).getByText('Asiste')).toBeTruthy();
-    expect(within(people).getByText('No asiste')).toBeTruthy();
+    expect(within(people).queryByText('No asiste')).toBeNull();
+    expect(within(people).queryByText('Sin respuesta')).toBeNull();
     const data = screen.getByRole('region', { name: 'Datos de la invitación' });
     expect(within(data).getByText('Permitidas')).toBeTruthy();
     const admin = screen.getByRole('region', { name: 'Administración' });
@@ -92,17 +82,36 @@ describe('detalle de la invitación', () => {
     expect(within(admin).getByRole('button', { name: 'Archivar invitación' })).toBeTruthy();
   });
 
-  it('resume la asistencia y permite copiar el enlace de una invitación activa', async () => {
+  it('trata el espacio abierto con nombre como acompañante y muestra su RSVP', async () => {
+    await mount({ guests: [base.guests[0], { name: 'Carlos Pérez', shortName: 'Acompañante', type: 'open', attending: false }] });
+    const people = screen.getByRole('region', { name: 'Personas' });
+    expect(within(people).getByText('Carlos Pérez')).toBeTruthy();
+    expect(within(people).getByText('Acompañante')).toBeTruthy();
+    expect(within(people).getByText('No asiste')).toBeTruthy();
+    expect(within(people).queryByText('Lugar sin asignar')).toBeNull();
+  });
+
+  it('muestra asistencia, capacidad y lugares libres dentro de Personas y copia el enlace', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
     await mount();
-    const summary = screen.getByLabelText('Resumen de la invitación');
-    expect(within(summary).getByText('Confirmados')).toBeTruthy();
-    expect(within(summary).getByText('Pendientes')).toBeTruthy();
+    const metrics = screen.getByRole('group', { name: 'Resumen de asistencia' });
+    expect(metrics.textContent).toContain('1 asistirá');
+    expect(metrics.textContent).toContain('2 lugares en total');
+    expect(metrics.textContent).toContain('1 lugar libre');
+    expect(Array.from(metrics.querySelectorAll('.invitation-detail__attendance-item'), (item) => item.textContent?.trim())).toEqual([
+      '2 lugares en total', '1 asistirá', '1 lugar libre',
+    ]);
     fireEvent.click(screen.getByRole('button', { name: 'Copiar enlace' }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('https://boda.example/invitacion/CS7H4K2P'));
   });
 
+  it('no cuenta un lugar abierto sin nombre como persona que asistirá', async () => {
+    await mount({ guests: [{ ...base.guests[0], attending: false }, { ...base.guests[1], attending: true }] });
+    const metrics = screen.getByRole('group', { name: 'Resumen de asistencia' });
+    expect(metrics.textContent).toContain('0 asistirán');
+    expect(metrics.textContent).toContain('1 lugar libre');
+  });
   it('muestra casos sin mensaje, sin sustituciones, archivado y permiso vigente', async () => {
     await mount({ message: '', replacementsAllowed: false, isArchived: true, archivedAt: '2026-09-21T12:00:00Z', editOverrideUntil: '2099-10-02T12:00:00Z' });
     expect(screen.getByText('Sin mensaje')).toBeTruthy();
@@ -117,8 +126,8 @@ describe('detalle de la invitación', () => {
     const one = [{ name: 'Cassandra', shortName: 'Cassandra', type: 'known' as const, attending: null }];
     vi.mocked(getInvitationById).mockResolvedValue({ ...base, maxGuests: 1, guests: one });
     render(<MemoryRouter initialEntries={['/invitaciones/CS7H4K2P']}><Routes><Route path="/invitaciones/:id" element={<InvitationDetailPage />} /></Routes></MemoryRouter>);
-    await screen.findByRole('heading', { name: 'Personas (1)' });
-    expect(screen.getByText('1 lugar')).toBeTruthy();
+    await screen.findByRole('heading', { name: 'Personas' });
+    expect(screen.getByText(/1 lugar en total/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Acciones para Cassandra' }));
     expect((screen.getByRole('button', { name: 'Eliminar invitado' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText('No se puede eliminar el último invitado.')).toBeTruthy();
@@ -150,7 +159,7 @@ describe('detalle de la invitación', () => {
     await mount();
     vi.mocked(updateInvitationGuestName).mockResolvedValue({ ...base, guests: [{ ...base.guests[0], name: 'Cassandra Nueva' }, base.guests[1]] });
     fireEvent.click(screen.getByRole('button', { name: 'Acciones para Cassandra Us Hernandez' }));
-    fireEvent.click(within(screen.getByRole('region', { name: 'Personas (2)' })).getByRole('button', { name: 'Editar nombre' }));
+    fireEvent.click(within(screen.getByRole('region', { name: 'Personas' })).getByRole('button', { name: 'Editar nombre' }));
     fireEvent.change(screen.getByLabelText('Nombre completo'), { target: { value: 'Cassandra Nueva' } });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
     await waitFor(() => expect(updateInvitationGuestName).toHaveBeenCalledWith(base.id, 0, base.version, 'Cassandra Nueva'));

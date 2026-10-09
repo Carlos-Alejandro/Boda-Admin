@@ -16,41 +16,34 @@
 .invitation-detail__header-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: end; gap: .7rem; }
 .invitation-detail__header-actions button { min-height: 2.8rem; font-family: var(--font-admin-serif); }
 
-.invitation-detail__overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--panel-gap); margin-bottom: 1rem; }
-.invitation-detail__overview > div { display: grid; align-content: start; gap: .18rem; min-width: 0; padding: .9rem 1rem; border: 1px solid #e5ded0; border-radius: .7rem; background: rgba(255, 254, 250, .9); box-shadow: 0 .35rem 1.15rem rgba(34, 54, 45, .035); }
-.invitation-detail__overview > div:first-child { border-top: 3px solid var(--gold); padding-top: calc(.9rem - 2px); }
-.invitation-detail__overview > div:nth-child(2) { border-top: 3px solid var(--green-700); padding-top: calc(.9rem - 2px); }
-.invitation-detail__overview > div:nth-child(3) { border-top: 3px solid #c8b485; padding-top: calc(.9rem - 2px); }
-.invitation-detail__overview span { color: var(--text-muted); font-size: .78rem; font-weight: 700; }
-.invitation-detail__overview strong { color: var(--green-950); font: 500 clamp(1.65rem, 2.3vw, 2.15rem)/1.2 var(--font-admin-serif); }
-.invitation-detail__overview small { color: var(--text-muted); font-size: .74rem; }
-.invitation-detail__reorder-help { margin: -.25rem 0 .3rem; color: var(--text-muted); font-size: .78rem; }
+.invitation-status-badge--prominent { display: inline-flex; min-height: 2.65rem; align-items: center; gap: .55rem; padding: .4rem 1rem .4rem .45rem !important; font-size: .88rem !important; line-height: 1; }
+.invitation-status-badge--prominent.invitation-status-badge--confirmed { background: #e4efe8; color: #234d37; }
+.invitation-status-badge--prominent.invitation-status-badge--pending { background: #f4ecda; color: #765b1d; }
+.invitation-status-badge--prominent.invitation-status-badge--partial { background: #ebe8f2; color: #594e70; }
+.invitation-status-badge--prominent.invitation-status-badge--declined { background: #f3e8e5; color: #814638; }
+.invitation-status-badge__icon { display: grid; flex: 0 0 1.8rem; width: 1.8rem; height: 1.8rem; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, .72); }
+.invitation-status-badge__icon svg { width: 1rem; height: 1rem; }
+.invitation-status-badge--confirmed .invitation-status-badge__icon { background: #38634e; color: white; }
+.invitation-status-badge--pending .invitation-status-badge__icon { color: #826421; }
+.invitation-status-badge--partial .invitation-status-badge__icon { color: #625879; }
+.invitation-status-badge--declined .invitation-status-badge__icon { color: #8a4c3e; }
 
 .invitation-detail__section { position: relative; min-width: 0; margin-top: 1rem; padding: var(--surface-padding); border: 1px solid #e5ded0; border-radius: .7rem; background: rgba(255, 254, 250, .92); box-shadow: 0 .5rem 1.6rem rgba(34, 54, 45, .035); }
+.invitation-detail__sections { display: grid; gap: var(--panel-gap); }
+.invitation-detail__sections > .invitation-detail__section { margin-top: 0; }
+.invitation-detail__sections > .invitation-detail__section:first-child { border-color: #d8d3c6; box-shadow: 0 .6rem 1.8rem rgba(34, 54, 45, .055); }
 .invitation-detail__section-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-width: 0; padding-bottom: .8rem; border-bottom: 1px solid #eee8dc; }
 .invitation-detail__section-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: end; gap: .65rem 1rem; }
-.invitation-detail__card-list { display: grid; gap: var(--panel-gap); margin-top: .85rem; }
-.invitation-detail__card-list .invitation-detail__section { margin-top: 0; }
-.invitation-detail__card-slot { transition: transform .24s cubic-bezier(.22, 1, .36, 1); }
-.invitation-detail__card-slot .invitation-detail__section-heading { cursor: grab; }
-.invitation-detail__card-slot.is-dragging .invitation-detail__section-heading { cursor: grabbing; }
-.invitation-detail__order-controls { display: inline-flex; align-items: center; gap: .25rem; padding-left: .7rem; border-left: 1px solid var(--border); color: var(--text-muted); }
-.invitation-detail__drag-grip { padding: 0 .25rem; color: #86958b; font-size: 1.25rem; line-height: 1; user-select: none; }
-.invitation-detail__order-controls button { display: grid; width: 2.5rem; height: 2.5rem; place-items: center; border: 1px solid transparent; border-radius: .4rem; background: transparent; color: var(--green-700); font-size: 1.05rem; line-height: 1; cursor: pointer; transition: border-color .18s ease, background-color .18s ease, transform .18s ease; }
-.invitation-detail__order-controls button:hover:not(:disabled) { border-color: var(--border); background: var(--green-100); transform: translateY(-1px); }
-.invitation-detail__order-controls button:disabled { opacity: .35; cursor: not-allowed; }
-.invitation-detail__card-slot { position: relative; }
-.invitation-detail__card-slot.is-dragging { z-index: 5; opacity: .97; transition: none; will-change: transform; }
-.invitation-detail__card-slot.is-dragging .invitation-detail__section { border-color: #c9b388; box-shadow: 0 1.2rem 2.5rem rgba(29, 54, 38, .18); transform: scale(1.008); }
-.invitation-detail__card-slot.is-drop-target::before { position: absolute; z-index: 4; top: -.55rem; right: .3rem; left: .3rem; height: 3px; border-radius: 999px; background: var(--gold); content: ""; }
-.invitation-detail__card-slot.is-drop-after::before { top: auto; bottom: -.55rem; }
-.invitation-detail__card-slot.is-drop-target .invitation-detail__section { border-color: var(--gold); box-shadow: 0 .9rem 1.8rem rgba(169, 132, 69, .13); }
+.invitation-detail__attendance { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem 1rem; margin: .85rem 0 .55rem; padding: .65rem .1rem; border-block: 1px solid #eee8dc; }
+.invitation-detail__attendance-item { display: inline-flex; min-width: 0; align-items: center; gap: .5rem; color: var(--green-900); font-size: .84rem; font-weight: 700; line-height: 1.35; }
+.invitation-detail__attendance-item + .invitation-detail__attendance-item { padding-left: 1rem; border-left: 1px solid #dcd6c9; }
+.invitation-detail__attendance-icon { display: grid; flex: 0 0 1.4rem; width: 1.4rem; height: 1.4rem; place-items: center; color: #927039; }
+.invitation-detail__attendance-icon svg { width: 1.2rem; height: 1.2rem; }
 .invitation-detail__section-intro { display: flex; align-items: center; min-width: 0; gap: .8rem; }
 .invitation-detail__section-icon { display: grid; flex: 0 0 2.7rem; width: 2.7rem; height: 2.7rem; place-items: center; border-radius: 50%; background: var(--green-100); color: var(--green-700); }
 .invitation-detail__section-icon svg { width: 1.35rem; height: 1.35rem; }
 .invitation-detail__section-heading h2 { margin: 0; color: var(--green-950); font: 500 1.25rem/1.25 var(--font-admin-serif); }
 .invitation-detail__section-heading p { margin: .2rem 0 0; color: var(--text-muted); font-size: .8rem; line-height: 1.4; }
-.invitation-detail__places { display: flex; align-items: center; flex-wrap: wrap; justify-content: end; gap: .4rem .65rem; color: var(--text-muted); font-size: .8rem; white-space: nowrap; }
 .invitation-detail__text-action { border: 0; background: none; padding: .25rem 0; color: var(--green-700); font-size: .8rem; font-weight: 700; text-align: left; }
 
 .invitation-detail__people { margin: 0; padding: 0; list-style: none; }
@@ -98,18 +91,10 @@
 .invitation-detail__back,
 .invitation-detail__header { animation: invitation-detail-enter .5s cubic-bezier(.22, 1, .36, 1) backwards; }
 .invitation-detail__header { animation-delay: .05s; }
-.invitation-detail__overview > div,
 .invitation-detail__section {
   animation: invitation-detail-enter .55s cubic-bezier(.22, 1, .36, 1) backwards;
   transition: border-color .25s ease, box-shadow .25s ease, transform .25s cubic-bezier(.22, 1, .36, 1);
 }
-.invitation-detail__overview > div:nth-child(1) { animation-delay: .12s; }
-.invitation-detail__overview > div:nth-child(2) { animation-delay: .18s; }
-.invitation-detail__overview > div:nth-child(3) { animation-delay: .24s; }
-.invitation-detail__card-slot--1 .invitation-detail__section { animation-delay: .3s; }
-.invitation-detail__card-slot--2 .invitation-detail__section { animation-delay: .36s; }
-.invitation-detail__card-slot--3 .invitation-detail__section { animation-delay: .42s; }
-.invitation-detail__overview > div:hover,
 .invitation-detail__section:hover { border-color: #d8d3c6; box-shadow: 0 .9rem 1.8rem rgba(29, 54, 38, .08); transform: translateY(-2px); }
 .invitation-detail__section:hover,
 .invitation-detail__section:focus-within { z-index: 2; }
@@ -150,33 +135,22 @@
   .invitation-detail__header-actions { justify-content: start; }
   .invitation-detail__section-heading { align-items: flex-start; flex-direction: column; }
   .invitation-detail__section-actions { width: 100%; justify-content: space-between; }
-  .invitation-detail__places { justify-content: start; margin-left: 3.5rem; }
 }
 @container (max-width: 32rem) {
   .invitation-detail__back,
   .invitation-detail__text-action { min-height: 2.75rem; }
   .invitation-detail__text-action { padding-block: .5rem; }
-  .invitation-detail__overview { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
-  .invitation-detail__overview > div { padding: .75rem .85rem; }
-  .invitation-detail__overview > div:first-child,
-  .invitation-detail__overview > div:nth-child(2),
-  .invitation-detail__overview > div:nth-child(3) { padding-top: calc(.75rem - 2px); }
-  .invitation-detail__overview > div:nth-child(3) { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
-  .invitation-detail__overview > div:nth-child(3) small { grid-column: 1 / -1; }
+  .invitation-detail__attendance { gap: .55rem .65rem; }
+  .invitation-detail__attendance-item { gap: .35rem; font-size: .78rem; }
+  .invitation-detail__attendance-item + .invitation-detail__attendance-item { padding-left: .65rem; }
   .invitation-detail__person { grid-template-columns: 2.2rem minmax(0, 1fr) 2.75rem; row-gap: .4rem; }
   .invitation-detail__person-status { grid-column: 2; grid-row: 2; justify-self: start; }
   .invitation-detail__menu-wrap { grid-column: 3; grid-row: 1 / 3; }
   .invitation-detail__person-form { grid-column: 1 / -1; }
-  .invitation-detail__places { margin-left: 0; }
-  .invitation-detail__order-controls button { width: 2.75rem; height: 2.75rem; }
   .invitation-detail__data-row { grid-template-columns: minmax(0, 1fr) auto; }
   .invitation-detail__data-row dt { grid-column: 1 / -1; }
   .invitation-detail__data-row dd { grid-column: 1; }
   .invitation-detail__row-action { grid-column: 2; }
-}
-@container (max-width: 20rem) {
-  .invitation-detail__overview { grid-template-columns: minmax(0, 1fr); }
-  .invitation-detail__overview > div:nth-child(3) { grid-column: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
   .invitation-detail *,
@@ -187,12 +161,10 @@
     transition-duration: .01ms !important;
     scroll-behavior: auto !important;
   }
-  .invitation-detail__overview > div:hover,
   .invitation-detail__section:hover,
   .invitation-detail__person:hover .invitation-detail__person-number,
   .invitation-detail__header-actions button:hover,
   .invitation-detail__archive button:hover,
-  .invitation-detail__order-controls button:hover,
   .invitation-detail__menu-trigger:hover,
   .invitation-detail__menu-trigger[aria-expanded="true"] { transform: none; }
 }
