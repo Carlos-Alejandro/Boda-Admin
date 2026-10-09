@@ -9,7 +9,7 @@
 	grid-template-columns: minmax(0, 1fr) minmax(16rem, .43fr);
 	width: 100%;
 	max-width: 62rem;
-	margin: var(--page-section-gap) auto 0;
+	margin: var(--page-section-gap) 0 0;
 	overflow: hidden;
 	border: 1px solid #e5ded0;
 	border-radius: .65rem;
