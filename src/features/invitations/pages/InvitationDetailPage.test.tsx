@@ -107,6 +107,21 @@ describe('detalle de la invitación', () => {
     expect(screen.getByText('Declinada')).toBeTruthy();
   });
 
+  it('shows a restored original without counting the former replacement as attending', async () => {
+    await mount({
+      rsvpStatus: 'pending',
+      maxGuests: 1,
+      guests: [{ name: 'Juan Pérez', shortName: 'Juan', type: 'known', attending: null }],
+    });
+    const people = screen.getByRole('region', { name: 'Personas' });
+    expect(within(people).getByText('Juan Pérez')).toBeTruthy();
+    expect(within(people).getByText('Sin respuesta')).toBeTruthy();
+    expect(within(people).queryByText('Invitado original: Juan Pérez')).toBeNull();
+    const metrics = screen.getByRole('group', { name: 'Resumen de asistencia' });
+    expect(metrics.textContent).toContain('0 asistirán');
+    expect(metrics.textContent).toContain('1 lugar en total');
+  });
+
   it('muestra asistencia, capacidad y lugares libres dentro de Personas y copia el enlace', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
